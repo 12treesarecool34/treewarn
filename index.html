@@ -157,7 +157,7 @@
         <div id="mapid"></div>
 
         <div class="editable-overlay" id="editableOverlay">
-            <h2 contenteditable="true" spellcheck="false">Alert</h2>
+            <h2 contenteditable="true" spellcheck="false">Alert Title</h2>
             <p contenteditable="true" spellcheck="false">Alert Text</p>
         </div>
 
@@ -226,8 +226,6 @@
                 </div>
             </div>
         </div>
-
-        <div id="infopiece" style="padding: 10px; color: white; z-index: 1000; overflow: auto; flex-direction: column; position: absolute; margin: 0px; top: 0px; left: 0px; width: auto; height: auto; border-radius: 5px; background: rgb(20, 20, 20, 0.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);"></div>
 
         <div id="custom-context-menu" class="context-menu">
             <ul>
@@ -373,13 +371,9 @@
         }
 
         document.addEventListener('contextmenu', rClick);
-        document.getElementById('infopiece').style.display = 'none';
 
         document.getElementById('menu-item-1').addEventListener('click', function() {
             isDrawing = true;
-            document.getElementById('infopiece').innerHTML = "Press (esc) to cancel.";
-            document.getElementById('infopiece').style.display = 'block';
-            setTimeout(() => document.getElementById('infopiece').style.display = 'none', 3000);
             drawPolygon.enable();
             document.getElementById('custom-context-menu').style.display = 'none';
         });
