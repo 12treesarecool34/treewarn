@@ -3,32 +3,27 @@
 
 <head>
     <title>SparkGen</title>
-    <link rel="icon" href="https://raw.githubusercontent.com/busybird15/busybird15.github.io/main/beta/sparkradar/logo-rounded.png"/>
+    <link rel="icon" href="https://raw.githubusercontent.com/busybird15/busybird15.github.io/main/beta/sparkradar/logo-rounded.png" />
 
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-    <!-- Leaflet & Leaflet.draw -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.2/leaflet.draw.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.2/leaflet.draw.js"></script>
 
-    <!-- Turf.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/5.1.6/turf.min.js"></script>
 
-    <!-- MapTiler SDK -->
     <script src="https://cdn.maptiler.com/maptiler-sdk-js/v2.0.3/maptiler-sdk.umd.js"></script>
     <link href="https://cdn.maptiler.com/maptiler-sdk-js/v2.0.3/maptiler-sdk.css" rel="stylesheet" />
     <script src="https://cdn.maptiler.com/leaflet-maptilersdk/v2.0.0/leaflet-maptilersdk.js"></script>
 
-    <!-- Google Icons & Fonts -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap" rel="stylesheet">
 
-    <!-- CSS -->
     <style>
         * {
             font-family: 'Outfit', sans-serif;
@@ -36,17 +31,18 @@
 
         body {
             overflow: hidden;
+            margin: 0;
         }
 
         #mapid {
             z-index: 1;
-            width: 100%;
-            height: 100%;
+            width: 100vw;
+            height: 100vh;
             position: absolute;
             top: 0px;
             left: 0px;
         }
-
+        
         .context-menu {
             display: none;
             position: absolute;
@@ -103,12 +99,6 @@
             font-size: large;
         }
 
-        textarea {
-            padding: 5px;
-            border-radius: 5px;
-            font-size: medium;
-        }
-
         .editable-overlay {
             position: absolute;
             top: 10px;
@@ -153,7 +143,6 @@
 
 <body>
     <div id="content">
-
         <div id="mapid"></div>
 
         <div class="editable-overlay" id="editableOverlay">
@@ -161,13 +150,9 @@
             <p contenteditable="true" spellcheck="false">Alert Text</p>
         </div>
 
-        <div id="loader" style="z-index: 100; flex-direction: column; position: absolute; top: 0px; left: 0px; width: 100%; height: 100%; background: black; color: white; display: flex; align-items: center; justify-content: center;">
+        <div id="loader" style="z-index: 100; flex-direction: column; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: black; color: white; display: flex; align-items: center; justify-content: center;">
             <h2>Loading...</h2>
             <p style="width: 70%; text-align: center;">We're downloading the county database. This may take some time but only needs to be done once.</p>
-            <div style="width: 200px; height: 10px; background: rgb(90, 90, 90); border-radius: 10px;">
-                <div id="loadingprog" style="height: 10px; background: white; border-radius: 10px;"></div>
-            </div>
-            <p id="textprog">0%</p>
         </div>
 
         <div id="style" style="z-index: 100; overflow-y: auto; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgb(20, 20, 20, 0.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); color: white; display: none;">
@@ -195,7 +180,7 @@
                     </div>
                     <div id="customColorPicker" style="display: flex; flex-direction: row; align-items: center; margin-top: 10px;">
                         <p style="margin: 0px 10px 0px 0px;">Custom Color: </p>
-                        <input id="styleColor" type="color" value="#FFFFFF">
+                        <input id="styleColor" type="color" value="#000000">
                     </div>
                     <br>
                     <div style="display: flex; flex-direction: row; align-items: center;">
@@ -208,7 +193,6 @@
                             <option value="emergency">Emergency</option>
                         </select>
                     </div>
-
                     <div style="display: flex; flex-direction: row; gap: 10px; margin-top: 20px;">
                         <button id="closeSettings">Close</button>
                     </div>
@@ -219,7 +203,7 @@
         <div id="about" style="z-index: 100; overflow-y: auto; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgb(20, 20, 20, 0.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); color: white; display: none;">
             <div style="display: flex; flex-direction: column; width: 100%; max-width: 100%; padding: 20px; box-sizing: border-box;">
                 <h1>About SparkGen</h1>
-                <p>SparkGen is a tool for creating and visualizing weather-related map overlays.</p>
+                <p>SparkGen is a simple tool for creating and visualizing your own weather alerts.</p>
                 <p>This is a modified version of the <a href="https://busybird15.github.io/sparkgen">original SparkGen</a>, which was made by <a href="https://busybird15.github.io/">BusyBird15</a>.</p>
                 <div style="display: flex; flex-direction: row; gap: 10px; margin-top: 20px;">
                     <button id="closeAbout">Close</button>
@@ -229,17 +213,17 @@
 
         <div id="custom-context-menu" class="context-menu">
             <ul>
-                <li id="menu-item-1"><i class="material-symbols-outlined">add</i> Add Polygon</li>
+                <li id="menu-item-1"><i class="material-symbols-outlined">add</i>New</li>
                 <li id="menu-item-2"><i class="material-symbols-outlined">settings</i>Settings</li>
                 <li id="menu-item-3"><i class="material-symbols-outlined">info</i>About</li>
-                <li id="menu-item-4"><i class="material-symbols-outlined">delete</i>Remove Polygon</li>
+                <li id="menu-item-4"><i class="material-symbols-outlined">edit</i>Edit</li>
+                <li id="menu-item-5"><i class="material-symbols-outlined">delete</i>Delete</li>
             </ul>
         </div>
 
         <div id="sizer" style="font-size: larger; z-index: 1000; justify-content: center; flex-direction: row; position: absolute; top: 0px; left: 0px; width: 100%; height: 100%; background: rgb(20, 20, 20, 0.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); color: white; display: none; align-items: center;">
             200x200
         </div>
-
     </div>
 
     <script>
@@ -256,25 +240,34 @@
         var northEast = L.latLng(85, 180);
         var bounds = L.latLngBounds(southWest, northEast);
         map.setMaxBounds(bounds);
+        map.on('drag', function() {
+            map.panInsideBounds(bounds, { animate: false });
+        });
 
         map.createPane('cities');
         map.getPane('cities').style.zIndex = 400;
+        map.createPane('dashedLines');
+        map.getPane('dashedLines').style.zIndex = 399;
+        map.createPane('warnings');
+        map.getPane('warnings').style.zIndex = 398;
         map.createPane('counties');
         map.getPane('counties').style.zIndex = 301;
 
+        var emergencyDashesGroup = new L.FeatureGroup([], { pane: 'dashedLines' }).addTo(map);
+        var warningsLayer = L.featureGroup([], { pane: 'warnings' }).addTo(map);
         var counties = L.geoJSON().addTo(map);
 
-        map.on('drag', function() {
-            map.panInsideBounds(bounds, {
-                animate: false
-            });
-        });
+        L.drawLocal.draw.handlers.polygon.tooltip.start = null;
+        L.drawLocal.draw.handlers.polygon.tooltip.cont = null;
+        L.drawLocal.draw.handlers.polygon.tooltip.end = null;
+        L.drawLocal.edit.handlers.edit.tooltip.text = null;
+        L.drawLocal.edit.handlers.edit.tooltip.subtext = null;
+        L.drawLocal.edit.handlers.remove.tooltip.text = null;
 
         var map_default = L.maptilerLayer({
             apiKey: "UMONrX6MjViuKZoR882u",
             style: '96084695-6598-45c9-8f28-a3e091d9275c',
         });
-
         var map_darkmaterial = L.maptilerLayer({
             apiKey: "UMONrX6MjViuKZoR882u",
             style: '6203b2a0-063f-44b0-95f7-8c69393a3a46',
@@ -286,17 +279,11 @@
             if (currentMapLayer) {
                 map.removeLayer(currentMapLayer);
             }
-
-            if (currentMapLayer == map_default) {
-                currentMapLayer = map_darkmaterial;
-            } else {
-                currentMapLayer = map_default;
-            }
-
+            currentMapLayer = (currentMapLayer === map_default) ? map_darkmaterial : map_default;
             map.addLayer(currentMapLayer);
         }
 
-        var clickColor = '#FFFFFF';
+        var clickColor = '#000000';
         var clickOpacity = 0.3;
         var isDrawing = false;
         var selectedPolygon = null;
@@ -331,8 +318,6 @@
             apiKey: "UMONrX6MjViuKZoR882u",
             style: '3077107e-833d-4087-999c-3b42c3ec5b13',
             pane: "cities",
-            navigationControl: false,
-            geolocateControl: false,
         }).addTo(map);
         citylayer.getContainer().style.pointerEvents = 'none';
 
@@ -341,7 +326,6 @@
 
         function rClick(e) {
             e.preventDefault();
-
             const menu = document.getElementById('custom-context-menu');
             menu.style.display = 'block';
 
@@ -353,23 +337,14 @@
             x = e.clientX;
             y = e.clientY;
 
-            if (x + menuWidth > windowWidth) {
-                x = windowWidth - menuWidth;
-            }
-            if (y + menuHeight > windowHeight) {
-                y = windowHeight - menuHeight;
-            }
-            if (x < 0) {
-                x = 0;
-            }
-            if (y < 0) {
-                y = 0;
-            }
+            if (x + menuWidth > windowWidth) x = windowWidth - menuWidth;
+            if (y + menuHeight > windowHeight) y = windowHeight - menuHeight;
+            if (x < 0) x = 0;
+            if (y < 0) y = 0;
 
             menu.style.left = `${x}px`;
             menu.style.top = `${y}px`;
         }
-
         document.addEventListener('contextmenu', rClick);
 
         document.getElementById('menu-item-1').addEventListener('click', function() {
@@ -388,33 +363,46 @@
             document.getElementById('custom-context-menu').style.display = 'none';
         });
 
+        var featureGroupForEditing = new L.FeatureGroup().addTo(map);
+        var currentEditHandler = null;
+
         document.getElementById('menu-item-4').addEventListener('click', function() {
             if (selectedPolygon && selectedPolygon.isCustomPolygon) {
-                counties.removeLayer(selectedPolygon);
+                removeEmergencyDash(selectedPolygon);
+                if (warningsLayer.hasLayer(selectedPolygon)) {
+                    warningsLayer.removeLayer(selectedPolygon);
+                } else if (counties.hasLayer(selectedPolygon)) {
+                    counties.removeLayer(selectedPolygon);
+                }
+                featureGroupForEditing.addLayer(selectedPolygon);
+                currentEditHandler = new L.EditToolbar.Edit(map, {
+                    featureGroup: featureGroupForEditing
+                });
+                currentEditHandler.enable();
             }
             document.getElementById('custom-context-menu').style.display = 'none';
         });
 
-        document.getElementById('closeSettings').addEventListener('click', function() {
-            document.getElementById('style').style.display = 'none';
+        document.getElementById('menu-item-5').addEventListener('click', function() {
+            if (selectedPolygon && selectedPolygon.isCustomPolygon) {
+                removeEmergencyDash(selectedPolygon);
+                if (warningsLayer.hasLayer(selectedPolygon)) {
+                    warningsLayer.removeLayer(selectedPolygon);
+                } else if (counties.hasLayer(selectedPolygon)) {
+                    counties.removeLayer(selectedPolygon);
+                }
+            }
+            document.getElementById('custom-context-menu').style.display = 'none';
         });
 
-        document.getElementById('closeAbout').addEventListener('click', function() {
-            document.getElementById('about').style.display = 'none';
-        });
-
-        var drawControl = new L.Control.Draw({
-            edit: false,
-            draw: false
-        });
+        var drawControl = new L.Control.Draw({ edit: false, draw: false });
         map.addControl(drawControl);
 
         var drawPolygon = new L.Draw.Polygon(map, drawControl.options.draw.polygon);
 
         map.on('draw:created', function(e) {
-            var layer = e.layer;
             isDrawing = false;
-
+            var layer = e.layer;
             var polygon = L.polygon(reverseSubarrays(layer.toGeoJSON()['geometry']['coordinates'][0]), {
                 color: 'black',
                 pane: 'counties',
@@ -427,95 +415,150 @@
         map.on('draw:canceled', function(e) {
             isDrawing = false;
         });
+        
+        map.on(L.Draw.Event.EDITSTOP, function(e) {
+            const layersToAddBack = [];
+            featureGroupForEditing.eachLayer(layer => {
+                layersToAddBack.push(layer);
+                if (layer.customColor === 'yes' && layer.levelPreset === 'emergency') {
+                    createEmergencyDash(layer);
+                }
+            });
+            featureGroupForEditing.clearLayers();
+            layersToAddBack.forEach(layer => {
+                if (layer.customColor === 'yes') {
+                    warningsLayer.addLayer(layer);
+                } else {
+                    counties.addLayer(layer);
+                }
+            });
+            currentEditHandler = null;
+        });
 
         map.on('contextmenu', function(e) {
             var clickedPoint = e.latlng;
             var clickedPointGeoJSON = turf.point([clickedPoint.lng, clickedPoint.lat]);
             var foundPolygon = false;
+            selectedPolygon = null;
 
-            var reversedLayers = counties.getLayers().slice().reverse();
+            var menuItem4 = document.getElementById('menu-item-4');
+            var menuItem5 = document.getElementById('menu-item-5');
 
-            reversedLayers.forEach(function(layer) {
-                if (layer instanceof L.Polygon && !foundPolygon) {
-                    var polygonGeoJSON = layer.toGeoJSON();
-                    var isInside = turf.booleanPointInPolygon(clickedPointGeoJSON, polygonGeoJSON);
-                    if (isInside) {
-                        foundPolygon = true;
-                        selectedPolygon = layer;
-                        document.getElementById('menu-item-4').style.display = layer.isCustomPolygon ? 'flex' : 'none';
-                    }
+            var checkLayers = function(layer) {
+                if (foundPolygon || !(layer instanceof L.Polygon)) return;
+                if (turf.booleanPointInPolygon(clickedPointGeoJSON, layer.toGeoJSON())) {
+                    foundPolygon = true;
+                    selectedPolygon = layer;
                 }
-            });
+            };
 
+            warningsLayer.getLayers().slice().reverse().forEach(checkLayers);
             if (!foundPolygon) {
-                selectedPolygon = null;
-                document.getElementById('menu-item-4').style.display = 'none';
+                counties.getLayers().slice().reverse().forEach(checkLayers);
+            }
+
+            if (foundPolygon) {
+                var isCustom = !!selectedPolygon.isCustomPolygon;
+                menuItem4.style.display = isCustom ? 'flex' : 'none';
+                menuItem5.style.display = isCustom ? 'flex' : 'none';
+            } else {
+                menuItem4.style.display = 'none';
+                menuItem5.style.display = 'none';
             }
         });
 
         map.on('click', function(e) {
             var contextMenu = document.getElementById('custom-context-menu');
-
             if (contextMenu.style.display !== 'none') {
                 contextMenu.style.display = 'none';
                 return;
             }
 
-            if (isDrawing) return;
+            if (isDrawing || currentEditHandler) return;
 
             var clickedPoint = e.latlng;
             var clickedPointGeoJSON = turf.point([clickedPoint.lng, clickedPoint.lat]);
-            var fixedAnObject = false;
-            var reversedLayers = counties.getLayers().slice().reverse();
+            var handled = false;
 
-            reversedLayers.forEach(function(layer) {
-                if (layer instanceof L.Polygon && !fixedAnObject) {
-                    var polygonGeoJSON = layer.toGeoJSON();
-                    var isInside = turf.booleanPointInPolygon(clickedPointGeoJSON, polygonGeoJSON);
-                    if (isInside) {
-                        fixedAnObject = true;
-                        if (layer.customColor == 'yes') {
-                            layer.setStyle({
-                                fillOpacity: 0,
-                                color: 'black',
-                                weight: 2
-                            });
-                            layer.customColor = 'no';
-                            layer.levelPreset = null;
-                            layer.baseColor = null;
-                            layer.animationState = null;
-                        } else {
-                            layer.customColor = 'yes';
-                            layer.levelPreset = document.getElementById('levelPreset').value;
-                            layer.baseColor = clickColor;
-                            layer.baseWeight = 2;
-                            layer.animationState = {
-                                weightPulse: false
-                            };
-                            layer.setStyle({
-                                fillOpacity: clickOpacity,
-                                fillColor: layer.baseColor,
-                                color: layer.baseColor,
-                                weight: layer.baseWeight
-                            });
-                        }
+            var reversedWarnings = warningsLayer.getLayers().slice().reverse();
+            reversedWarnings.forEach(function(layer) {
+                if (handled || !(layer instanceof L.Polygon)) return;
+                if (turf.booleanPointInPolygon(clickedPointGeoJSON, layer.toGeoJSON())) {
+                    handled = true;
+                    warningsLayer.removeLayer(layer);
+                    removeEmergencyDash(layer);
+                    layer.setStyle({ fillOpacity: 0, color: 'black', weight: 2 });
+                    layer.customColor = 'no';
+                    layer.levelPreset = null;
+                    layer.baseColor = null;
+                    delete layer.options.baseWeight;
+                    counties.addLayer(layer);
+                }
+            });
+
+            if (handled) return;
+
+            var reversedCounties = counties.getLayers().slice().reverse();
+            reversedCounties.forEach(function(layer) {
+                if (handled || !(layer instanceof L.Polygon)) return;
+                if (turf.booleanPointInPolygon(clickedPointGeoJSON, layer.toGeoJSON())) {
+                    handled = true;
+                    counties.removeLayer(layer);
+                    layer.customColor = 'yes';
+                    layer.levelPreset = document.getElementById('levelPreset').value;
+                    layer.baseColor = clickColor;
+                    layer.options.baseWeight = 2;
+                    if (layer.levelPreset === 'emergency') {
+                        createEmergencyDash(layer);
                     }
+                    layer.setStyle({
+                        fillOpacity: clickOpacity,
+                        fillColor: layer.baseColor,
+                        color: layer.baseColor,
+                        weight: layer.options.baseWeight
+                    });
+                    warningsLayer.addLayer(layer);
                 }
             });
         });
 
-        var timeouter = null;
-        document.getElementById("sizer").style.display = 'none';
+        document.addEventListener('keydown', function(e) {
+            if (document.activeElement && (document.activeElement.isContentEditable || /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))) {
+                return;
+            }
 
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (isDrawing) drawPolygon.completeShape();
+                if (currentEditHandler) {
+                    currentEditHandler.save();
+                    currentEditHandler.disable();
+                }
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                if (isDrawing) {
+                    drawPolygon.disable();
+                    isDrawing = false;
+                }
+                if (currentEditHandler) {
+                    currentEditHandler.revertLayers();
+                    currentEditHandler.disable();
+                }
+            }
+        });
+
+        document.getElementById('closeSettings').addEventListener('click', () => document.getElementById('style').style.display = 'none');
+        document.getElementById('closeAbout').addEventListener('click', () => document.getElementById('about').style.display = 'none');
+        
+        var timeouter = null;
         window.addEventListener('resize', function(event) {
             let vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
             let vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
-            document.getElementById("sizer").style.display = 'flex';
-            document.getElementById("sizer").innerHTML = "<b>" + vw + "</b> x <b>" + vh + "</b>";
+            const sizer = document.getElementById("sizer");
+            sizer.style.display = 'flex';
+            sizer.innerHTML = "<b>" + vw + "</b> x <b>" + vh + "</b>";
             clearTimeout(timeouter);
-            timeouter = setTimeout(() => {
-                document.getElementById("sizer").style.display = 'none';
-            }, 1500);
+            timeouter = setTimeout(() => { sizer.style.display = 'none'; }, 1500);
         });
 
         const editableOverlay = document.getElementById('editableOverlay');
@@ -524,127 +567,100 @@
         const aboutMenu = document.getElementById('about');
 
         function updateOverlayVisibility() {
-            if (loader.style.display !== 'none' || styleMenu.style.display !== 'none' || aboutMenu.style.display !== 'none') {
-                editableOverlay.style.display = 'none';
-            } else {
-                editableOverlay.style.display = 'block';
-            }
+            const isModalOpen = loader.style.display !== 'none' || styleMenu.style.display !== 'none' || aboutMenu.style.display !== 'none';
+            editableOverlay.style.display = isModalOpen ? 'none' : 'block';
         }
 
-        updateOverlayVisibility();
-
         const observer = new MutationObserver(updateOverlayVisibility);
-        const observerConfig = {
-            attributes: true,
-            attributeFilter: ['style']
-        };
-
+        const observerConfig = { attributes: true, attributeFilter: ['style'] };
         observer.observe(loader, observerConfig);
         observer.observe(styleMenu, observerConfig);
         observer.observe(aboutMenu, observerConfig);
-
+        updateOverlayVisibility();
 
         const DEFAULT_OPACITY = 0.3;
 
-        document.getElementById('customColorPicker').style.display =
-            document.getElementById('stylePreset').value === 'custom' ? 'flex' : 'none';
-
         function updateCurrentStyle() {
             const presetSelect = document.getElementById('stylePreset');
-            if (presetSelect.value === 'custom') {
-                clickColor = document.getElementById('styleColor').value;
-            } else {
-                clickColor = presetSelect.value;
-            }
+            clickColor = (presetSelect.value === 'custom') 
+                ? document.getElementById('styleColor').value 
+                : presetSelect.value;
             clickOpacity = DEFAULT_OPACITY;
         }
-        updateCurrentStyle();
-
+        
         document.getElementById('stylePreset').addEventListener('change', function() {
             const customColorPicker = document.getElementById('customColorPicker');
-            const colorPicker = document.getElementById('styleColor');
-
-            if (this.value === 'custom') {
-                customColorPicker.style.display = 'flex';
-            } else {
-                customColorPicker.style.display = 'none';
-                colorPicker.value = this.value;
+            customColorPicker.style.display = (this.value === 'custom') ? 'flex' : 'none';
+            if (this.value !== 'custom') {
+                document.getElementById('styleColor').value = this.value;
             }
             updateCurrentStyle();
         });
 
-        document.getElementById('styleColor').addEventListener('input', function() {
-            if (document.getElementById('stylePreset').value === 'custom') {
+        document.getElementById('styleColor').addEventListener('input', () => {
+             if (document.getElementById('stylePreset').value === 'custom') {
                 updateCurrentStyle();
             }
         });
 
-        let animationTick = 0;
-        setInterval(function() {
-            animationTick++;
-            counties.eachLayer(function(layer) {
-                if (layer instanceof L.Polygon && layer.customColor === 'yes' && layer.levelPreset && layer.animationState) {
-                    const preset = layer.levelPreset;
-                    const state = layer.animationState;
-                    let newStyle = {};
+        updateCurrentStyle();
 
-                    const handleBorderPulse = (size, ticks) => {
-                        if (animationTick % ticks === 0) {
-                            state.weightPulse = !state.weightPulse;
-                            newStyle.weight = state.weightPulse ? layer.baseWeight + size : layer.baseWeight;
-                        }
-                    };
-
-                    switch (preset) {
-                        case 'standard':
-                            break;
-                        case 'considerable':
-                            handleBorderPulse(1, 2);
-                            break;
-                        case 'destructive':
-                            handleBorderPulse(2, 2);
-                            break;
-                        case 'pds':
-                            handleBorderPulse(4, 1);
-                            break;
-                        case 'emergency':
-                            handleBorderPulse(8, 1);
-                            break;
-                    }
-
-                    if (Object.keys(newStyle).length > 0) {
-                        layer.setStyle(newStyle);
-                    }
-                }
-            });
-        }, 500);
-
-        function preventEditableOverflow(event) {
-            const element = event.target;
-
-            while (element.scrollHeight > element.clientHeight || element.scrollWidth > element.clientWidth) {
-                element.innerText = element.innerText.slice(0, -1);
-            }
-
-            const range = document.createRange();
-            const selection = window.getSelection();
-
-            if (element.childNodes.length > 0) {
-                const lastChild = element.childNodes[element.childNodes.length - 1];
-                const length = (lastChild.nodeValue || "").length;
-
-                range.setStart(lastChild, length);
-                range.collapse(true);
-
-                selection.removeAllRanges();
-                selection.addRange(range);
+        function getPulseSize(preset) {
+            switch (preset) {
+                case 'considerable': return 2;
+                case 'destructive':  return 5;
+                case 'pds':          return 8;
+                case 'emergency':    return 8;
+                default:             return 0;
             }
         }
 
-        const editableElements = document.querySelectorAll('#editableOverlay [contenteditable="true"]');
-        editableElements.forEach(el => {
-            el.addEventListener('input', preventEditableOverflow);
-        });
+        function createEmergencyDash(originalLayer) {
+            removeEmergencyDash(originalLayer);
+            var dashPoly = L.polygon(originalLayer.getLatLngs(), {
+                color: 'white',
+                weight: 4,
+                fill: false,
+                dashArray: '8, 24',
+                interactive: false,
+            });
+            dashPoly.original_id = originalLayer._leaflet_id;
+            emergencyDashesGroup.addLayer(dashPoly);
+        }
+
+        function removeEmergencyDash(originalLayer) {
+            var layerToRemove = null;
+            emergencyDashesGroup.eachLayer(function(dashLayer) {
+                if (dashLayer.original_id === originalLayer._leaflet_id) {
+                    layerToRemove = dashLayer;
+                }
+            });
+            if (layerToRemove) {
+                emergencyDashesGroup.removeLayer(layerToRemove);
+            }
+        }
+        
+        function animateAllPolygons() {
+            const cycleDuration = 2000;
+            const timeInCycle = Date.now() % cycleDuration;
+            let amplitude = (timeInCycle < cycleDuration / 2) 
+                ? (timeInCycle / (cycleDuration / 2)) 
+                : ((cycleDuration - timeInCycle) / (cycleDuration / 2));
+
+            warningsLayer.eachLayer(function(layer) {
+                if (layer instanceof L.Polygon && layer.customColor === 'yes' && layer.levelPreset) {
+                    const baseWeight = layer.options.baseWeight || 2;
+                    const pulseSize = getPulseSize(layer.levelPreset);
+                    if (pulseSize > 0) {
+                        const newWeight = baseWeight + (pulseSize * amplitude);
+                        layer.setStyle({ weight: newWeight });
+                    }
+                }
+            });
+        }
+        
+        setInterval(animateAllPolygons, 50);
+
     </script>
 </body>
 
