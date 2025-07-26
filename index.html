@@ -49,8 +49,10 @@
             z-index: 10000;
             width: max-content;
             overflow: hidden;
-            background-color: #fff;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
+            color: white;
+            background: rgba(20, 20, 20, 0.6);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             border-radius: 10px;
         }
 
@@ -72,7 +74,8 @@
         }
 
         .context-menu ul li:hover {
-            background-color: #eee;
+            background-color: rgba(255, 255, 255, 0.1);
+            cursor: pointer;
         }
 
         button {
@@ -80,7 +83,7 @@
             margin: 8px;
             background: rgb(254, 22, 103);
             color: black;
-            border-radius: 5px;
+            border-radius: 10px;
             border: none;
             cursor: pointer;
             font-size: large;
@@ -94,7 +97,7 @@
         select {
             padding: 5px;
             border: none;
-            border-radius: 20px;
+            border-radius: 10px;
             cursor: pointer;
             font-size: large;
         }
@@ -104,12 +107,12 @@
             top: 10px;
             right: 10px;
             z-index: 1001;
-            padding: 10px;
+            padding: 5px;
             color: white;
             background: rgba(20, 20, 20, 0.6);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            border-radius: 5px;
+            border-radius: 10px;
             width: fit-content;
             height: fit-content;
             max-width: calc(100vw - 20px);
@@ -119,9 +122,11 @@
 
         .editable-overlay h2,
         .editable-overlay p {
+            border-radius: 10px;
             margin-top: 0;
             margin-bottom: 0;
-            padding: 5px;
+            padding: 10px;
+            margin: 5px;
             border: 1px solid transparent;
             white-space: pre-wrap;
             overflow: hidden;
