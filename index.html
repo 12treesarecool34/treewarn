@@ -104,10 +104,10 @@
 
         .editable-overlay {
             position: absolute;
-            top: 10px;
-            right: 10px;
+            right: 0px;
             z-index: 1001;
             padding: 5px;
+            margin: 10px;
             color: white;
             background: rgba(20, 20, 20, 0.6);
             backdrop-filter: blur(10px);
@@ -115,19 +115,16 @@
             border-radius: 10px;
             width: fit-content;
             height: fit-content;
-            max-width: calc(100vw - 20px);
-            max-height: calc(100vh - 40px);
+            max-height: calc(100vh - 30px);
             overflow: hidden;
         }
 
         .editable-overlay h2,
         .editable-overlay p {
             border-radius: 10px;
-            margin-top: 0;
-            margin-bottom: 0;
             padding: 10px;
             margin: 5px;
-            border: 1px solid transparent;
+            border: none;
             white-space: pre-wrap;
             overflow: hidden;
         }
@@ -140,7 +137,8 @@
 
         .editable-overlay h2:focus,
         .editable-overlay p:focus {
-            border: 1px dashed white;
+            background-color: rgba(255, 255, 255, 0.1);
+            border: none;
             outline: none;
         }
     </style>
