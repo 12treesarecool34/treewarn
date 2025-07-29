@@ -2,8 +2,8 @@
 <html lang="en">
 
 <head>
-    <title>SparkGen</title>
-    <link rel="icon" href="https://raw.githubusercontent.com/busybird15/busybird15.github.io/main/beta/sparkradar/logo-rounded.png" />
+    <title>TreeWarn</title>
+    <link rel="icon" href="https://raw.githubusercontent.com/microsoft/fluentui-emoji/refs/heads/main/assets/Deciduous%20tree/3D/deciduous_tree_3d.png" />
 
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -12,12 +12,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.2/leaflet.draw.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.2/leaflet.draw.js"></script>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/5.1.6/turf.min.js"></script>
 
-    <script src="https://cdn.maptiler.com/maptiler-sdk-js/v2.0.3/maptiler-sdk.umd.js"></script>
-    <link href="https://cdn.maptiler.com/maptiler-sdk-js/v2.0.3/maptiler-sdk.css" rel="stylesheet" />
-    <script src="https://cdn.maptiler.com/leaflet-maptilersdk/v2.0.0/leaflet-maptilersdk.js"></script>
+    <link href="https://unpkg.com/maplibre-gl@4.1.2/dist/maplibre-gl.css" rel="stylesheet" />
+    <script src="https://unpkg.com/maplibre-gl@4.1.2/dist/maplibre-gl.js"></script>
+    <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.21/leaflet-maplibre-gl.js"></script>
 
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -28,13 +27,11 @@
         * {
             font-family: 'Outfit', sans-serif;
         }
-
         body {
             overflow: hidden;
             margin: 0;
         }
-
-        #mapid {
+        #map-container {
             z-index: 1;
             width: 100vw;
             height: 100vh;
@@ -42,7 +39,6 @@
             top: 0px;
             left: 0px;
         }
-        
         .context-menu {
             display: none;
             position: absolute;
@@ -55,29 +51,24 @@
             -webkit-backdrop-filter: blur(10px);
             border-radius: 10px;
         }
-
         .context-menu ul {
             list-style: none;
             padding: 0;
             margin: 0;
         }
-
         .context-menu ul li {
             display: flex;
             align-items: center;
             padding: 10px;
             cursor: pointer;
         }
-
         .context-menu .material-symbols-outlined {
             padding-right: 10px;
         }
-
         .context-menu ul li:hover {
             background-color: rgba(255, 255, 255, 0.1);
             cursor: pointer;
         }
-
         button {
             padding: 4px;
             margin: 8px;
@@ -89,11 +80,9 @@
             font-size: large;
             width: 100px;
         }
-
         button:hover {
             background: rgb(255, 80, 120);
         }
-
         select {
             padding: 5px;
             border: none;
@@ -101,8 +90,7 @@
             cursor: pointer;
             font-size: large;
         }
-
-        .editable-overlay {
+        .text-overlay {
             position: absolute;
             right: 0px;
             z-index: 1001;
@@ -118,9 +106,8 @@
             max-height: calc(100vh - 30px);
             overflow: hidden;
         }
-
-        .editable-overlay h2,
-        .editable-overlay p {
+        .text-overlay h2,
+        .text-overlay p {
             border-radius: 10px;
             padding: 10px;
             margin: 5px;
@@ -128,47 +115,51 @@
             white-space: pre-wrap;
             overflow: hidden;
         }
-
-        .editable-overlay h2:hover,
-        .editable-overlay p:hover {
+        .text-overlay h2:hover,
+        .text-overlay p:hover {
             background-color: rgba(255, 255, 255, 0.1);
             cursor: pointer;
         }
-
-        .editable-overlay h2:focus,
-        .editable-overlay p:focus {
+        .text-overlay h2:focus,
+        .text-overlay p:focus {
             background-color: rgba(255, 255, 255, 0.1);
             border: none;
             outline: none;
+        }
+        .text-overlay .no-edit:hover {
+            background-color: transparent;
+            cursor: default;
         }
     </style>
 </head>
 
 <body>
     <div id="content">
-        <div id="mapid"></div>
+        <div id="map-container"></div>
 
-        <div class="editable-overlay" id="editableOverlay">
+        <div class="text-overlay" id="text-overlay">
             <h2 contenteditable="true" spellcheck="false">Alert Title</h2>
             <p contenteditable="true" spellcheck="false">Alert Text</p>
         </div>
 
-        <div id="loader" style="z-index: 100; flex-direction: column; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: black; color: white; display: flex; align-items: center; justify-content: center;">
+        <div id="loader-overlay" style="z-index: 100; flex-direction: column; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: black; color: white; display: flex; align-items: center; justify-content: center;">
             <h2>Loading...</h2>
-            <p style="width: 70%; text-align: center;">We're downloading the county database. This may take some time but only needs to be done once.</p>
         </div>
 
-        <div id="style" style="z-index: 100; overflow-y: auto; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgb(20, 20, 20, 0.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); color: white; display: none;">
+        <div id="settings-modal" style="z-index: 100; overflow-y: auto; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgb(20, 20, 20, 0.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); color: white; display: none;">
             <div style="display: flex; flex-direction: column; width: 100%; max-width: 100%; padding: 20px; box-sizing: border-box;">
                 <h1>Settings</h1>
                 <div style="display: flex; flex-direction: row; align-items: center;">
-                    <input onchange="changemap();" type="checkbox"> Use light maps
+                    <input id="theme-toggle-checkbox" onchange="toggleMapTheme();" type="checkbox"> Use light maps
+                </div>
+                <div style="display: flex; flex-direction: row; align-items: center;">
+                    <input id="radar-toggle-checkbox" onchange="toggleRadarLayer(this);" type="checkbox" checked> Radar
                 </div>
                 <h3>Styles</h3>
                 <div style="display: flex; flex-direction: column; align-items: left;">
                     <div style="display: flex; flex-direction: row; align-items: center;">
                         <p style="margin: 0px 10px 0px 0px;">Color: </p>
-                        <select id="stylePreset" style="min-width: 150px;">
+                        <select id="color-preset-select" style="min-width: 150px;">
                             <option value="custom">Custom</option>
                             <option value="#FF0000">Tornado</option>
                             <option value="#FFA500">Severe</option>
@@ -181,14 +172,14 @@
                             <option value="#0000FF">Discussion</option>
                         </select>
                     </div>
-                    <div id="customColorPicker" style="display: flex; flex-direction: row; align-items: center; margin-top: 10px;">
+                    <div id="custom-color-picker-container" style="display: flex; flex-direction: row; align-items: center; margin-top: 10px;">
                         <p style="margin: 0px 10px 0px 0px;">Custom Color: </p>
-                        <input id="styleColor" type="color" value="#000000">
+                        <input id="custom-color-input" type="color" value="#000000">
                     </div>
                     <br>
                     <div style="display: flex; flex-direction: row; align-items: center;">
                         <p style="margin: 0px 10px 0px 0px;">Level: </p>
-                        <select id="levelPreset" style="min-width: 150px;">
+                        <select id="level-preset-select" style="min-width: 150px;">
                             <option value="standard">Standard</option>
                             <option value="considerable">Considerable</option>
                             <option value="destructive">Destructive</option>
@@ -197,40 +188,59 @@
                         </select>
                     </div>
                     <div style="display: flex; flex-direction: row; gap: 10px; margin-top: 20px;">
-                        <button id="closeSettings">Close</button>
+                        <button id="close-settings-button">Close</button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div id="about" style="z-index: 100; overflow-y: auto; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgb(20, 20, 20, 0.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); color: white; display: none;">
+        <div id="share-modal" style="z-index: 100; overflow-y: auto; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgb(20, 20, 20, 0.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); color: white; display: none;">
             <div style="display: flex; flex-direction: column; width: 100%; max-width: 100%; padding: 20px; box-sizing: border-box;">
-                <h1>About SparkGen</h1>
-                <p>SparkGen is a simple tool for creating and visualizing your own weather alerts.</p>
-                <p>This is a modified version of the <a href="https://busybird15.github.io/sparkgen">original SparkGen</a>, which was made by <a href="https://busybird15.github.io/">BusyBird15</a>.</p>
-                <div style="display: flex; flex-direction: row; gap: 10px; margin-top: 20px;">
-                    <button id="closeAbout">Close</button>
+                <h1>Share</h1>
+                <div style="display: flex; flex-direction: row; align-items: center;">
+                    <input id="share-settings-checkbox" onchange="updateShareUrl()" type="checkbox"> Share settings
+                </div>
+                <h3>Copy this URL modifier to share your alerts!</h3>
+                <input type="text" id="share-url-input" style="width: 250px;">
+                <div style="display: flex; flex-direction: column; align-items: left;">
+                    <div style="display: flex; flex-direction: row; gap: 10px; margin-top: 20px;">
+                        <button id="close-share-button">Close</button>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div id="custom-context-menu" class="context-menu">
+        <div id="about-modal" style="z-index: 100; overflow-y: auto; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgb(20, 20, 20, 0.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); color: white; display: none;">
+            <div style="display: flex; flex-direction: column; width: 100%; max-width: 100%; padding: 20px; box-sizing: border-box;">
+                <h1>About TreeWarn</h1>
+                <p>TreeWarn is a simple tool for creating and visualizing your own weather alerts.</p>
+                <p>This is a modified version of <a href="https://busybird15.github.io/sparkgen">SparkGen</a>, which was made by <a href="https://busybird15.github.io/">BusyBird15</a>.</p>
+                <p>Radar data is from the <a href="https://mesonet.agron.iastate.edu/">Iowa Environmental Mesonet</a>.</p>
+                <div style="display: flex; flex-direction: row; gap: 10px; margin-top: 20px;">
+                    <button id="close-about-button">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="context-menu" class="context-menu">
             <ul>
-                <li id="menu-item-1"><i class="material-symbols-outlined">add</i>New</li>
-                <li id="menu-item-2"><i class="material-symbols-outlined">settings</i>Settings</li>
-                <li id="menu-item-3"><i class="material-symbols-outlined">info</i>About</li>
-                <li id="menu-item-4"><i class="material-symbols-outlined">edit</i>Edit</li>
-                <li id="menu-item-5"><i class="material-symbols-outlined">delete</i>Delete</li>
+                <li id="context-menu-new-polygon"><i class="material-symbols-outlined">add</i>New Polygon</li>
+                <li id="context-menu-new-marker"><i class="material-symbols-outlined">add_location</i>New Marker</li>
+                <li id="context-menu-settings"><i class="material-symbols-outlined">settings</i>Settings</li>
+                <li id="context-menu-about"><i class="material-symbols-outlined">info</i>About</li>
+                <li id="context-menu-edit"><i class="material-symbols-outlined">edit</i>Edit</li>
+                <li id="context-menu-delete"><i class="material-symbols-outlined">delete</i>Delete</li>
+                <li id="context-menu-share"><i class="material-symbols-outlined">share</i>Share</li>
             </ul>
         </div>
 
-        <div id="sizer" style="font-size: larger; z-index: 1000; justify-content: center; flex-direction: row; position: absolute; top: 0px; left: 0px; width: 100%; height: 100%; background: rgb(20, 20, 20, 0.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); color: white; display: none; align-items: center;">
+        <div id="viewport-sizer" style="font-size: larger; z-index: 1000; justify-content: center; flex-direction: row; position: absolute; top: 0px; left: 0px; width: 100%; height: 100%; background: rgb(20, 20, 20, 0.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); color: white; display: none; align-items: center;">
             200x200
         </div>
     </div>
 
     <script>
-        var map = L.map(document.getElementById("mapid"), {
+        const map = L.map(document.getElementById("map-container"), {
             preferCanvas: true,
             doubleClickZoom: false,
             attributionControl: true,
@@ -239,14 +249,16 @@
             minZoom: 2
         }).setView([38.0, -100.4], 4);
 
-        var southWest = L.latLng(-85, -180);
-        var northEast = L.latLng(85, 180);
-        var bounds = L.latLngBounds(southWest, northEast);
+        const southWest = L.latLng(-85, -180);
+        const northEast = L.latLng(85, 180);
+        const bounds = L.latLngBounds(southWest, northEast);
         map.setMaxBounds(bounds);
         map.on('drag', function() {
             map.panInsideBounds(bounds, { animate: false });
         });
 
+        map.createPane('radar');
+        map.getPane('radar').style.zIndex = 250;
         map.createPane('cities');
         map.getPane('cities').style.zIndex = 400;
         map.createPane('dashedLines');
@@ -256,80 +268,98 @@
         map.createPane('counties');
         map.getPane('counties').style.zIndex = 301;
 
-        var emergencyDashesGroup = new L.FeatureGroup([], { pane: 'dashedLines' }).addTo(map);
-        var warningsLayer = L.featureGroup([], { pane: 'warnings' }).addTo(map);
-        var counties = L.geoJSON().addTo(map);
-
+        const emergencyDashesGroup = new L.FeatureGroup([], { pane: 'dashedLines' }).addTo(map);
+        const warningPolygonsLayer = L.featureGroup([], { pane: 'warnings' }).addTo(map);
+        const customMarkersLayer = L.featureGroup([], { pane: 'counties' }).addTo(map);
+        const warningMarkersLayer = L.featureGroup([], { pane: 'warnings' }).addTo(map);
+        let countyBoundariesLayer = L.geoJSON().addTo(map);
+        
         L.drawLocal.draw.handlers.polygon.tooltip.start = null;
         L.drawLocal.draw.handlers.polygon.tooltip.cont = null;
         L.drawLocal.draw.handlers.polygon.tooltip.end = null;
+        L.drawLocal.draw.handlers.marker.tooltip.start = null;
         L.drawLocal.edit.handlers.edit.tooltip.text = null;
         L.drawLocal.edit.handlers.edit.tooltip.subtext = null;
         L.drawLocal.edit.handlers.remove.tooltip.text = null;
-
-        var map_default = L.maptilerLayer({
-            apiKey: "UMONrX6MjViuKZoR882u",
-            style: '96084695-6598-45c9-8f28-a3e091d9275c',
+        
+        const lightThemeLayer = L.maplibreGL({
+            style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
         });
-        var map_darkmaterial = L.maptilerLayer({
-            apiKey: "UMONrX6MjViuKZoR882u",
-            style: '6203b2a0-063f-44b0-95f7-8c69393a3a46',
+        const darkThemeLayer = L.maplibreGL({
+            style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
+        }).addTo(map);
+        let currentThemeLayer = darkThemeLayer;
+
+        const radarLayer = L.tileLayer.wms("http://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r.cgi", {
+            layers: 'nexrad-n0r-900913',
+            format: 'image/png',
+            transparent: true,
+            pane: 'radar',
+            attribution: "IEM"
         }).addTo(map);
 
-        var currentMapLayer = map_darkmaterial;
-
-        function changemap() {
-            if (currentMapLayer) {
-                map.removeLayer(currentMapLayer);
+        setInterval(() => {
+            if (map.hasLayer(radarLayer)) {
+                radarLayer.setParams({ time: Date.now() });
             }
-            currentMapLayer = (currentMapLayer === map_default) ? map_darkmaterial : map_default;
-            map.addLayer(currentMapLayer);
+        }, 60000);
+
+        function toggleMapTheme() {
+            if (currentThemeLayer) {
+                map.removeLayer(currentThemeLayer);
+            }
+            currentThemeLayer = (currentThemeLayer === lightThemeLayer) ? darkThemeLayer : lightThemeLayer;
+            map.addLayer(currentThemeLayer);
+        }
+        
+        function toggleRadarLayer(checkbox) {
+            if (checkbox.checked) {
+                map.addLayer(radarLayer);
+            } else {
+                map.removeLayer(radarLayer);
+            }
         }
 
-        var clickColor = '#000000';
-        var clickOpacity = 0.3;
-        var isDrawing = false;
-        var selectedPolygon = null;
+        let activeColor = '#000000';
+        let activeOpacity = 0.3;
+        let isDrawing = false;
+        let selectedPolygon = null;
+        let selectedMarker = null;
+        let isSharedMode = false;
 
         function reverseSubarrays(arr) {
             return arr.map(subArr => subArr.slice().reverse());
         }
 
-        function perFeature(feature, layer) {
+        function styleCountyFeature(feature, layer) {
             layer.setStyle({
                 color: 'black',
                 fillOpacity: 0,
-                weight: 2
+                weight: 0
             });
             layer.customColor = 'no';
         }
 
-        fetch('https://busybird15.github.io/assets/countymaps/counties-simplified.json')
+        fetch('https://raw.githubusercontent.com/12treesarecool34/treewarn/refs/heads/main/counties-simplified.json')
             .then(response => response.json())
             .then(data => {
-                counties = L.geoJSON(data, {
-                    onEachFeature: perFeature,
+                countyBoundariesLayer = L.geoJSON(data, {
+                    onEachFeature: styleCountyFeature,
                     pane: 'counties'
                 }).addTo(map);
-                document.getElementById("loader").style.display = "none";
+                loadDataFromUrl();
+                document.getElementById("loader-overlay").style.display = "none";
             })
-            .catch(error => {
-                console.error('Error loading GeoJSON data:', error);
-            });
+            .catch(error => console.error('Error loading GeoJSON data:', error));
+        
+        let contextMenuX = 0;
+        let contextMenuY = 0;
 
-        var citylayer = L.maptilerLayer({
-            apiKey: "UMONrX6MjViuKZoR882u",
-            style: '3077107e-833d-4087-999c-3b42c3ec5b13',
-            pane: "cities",
-        }).addTo(map);
-        citylayer.getContainer().style.pointerEvents = 'none';
-
-        let x = 0;
-        let y = 0;
-
-        function rClick(e) {
-            e.preventDefault();
-            const menu = document.getElementById('custom-context-menu');
+        function showContextMenu(event) {
+            event.preventDefault();
+            const menu = document.getElementById('context-menu');
             menu.style.display = 'block';
 
             const menuWidth = menu.offsetWidth;
@@ -337,210 +367,273 @@
             const windowWidth = window.innerWidth;
             const windowHeight = window.innerHeight;
 
-            x = e.clientX;
-            y = e.clientY;
+            contextMenuX = event.clientX;
+            contextMenuY = event.clientY;
 
-            if (x + menuWidth > windowWidth) x = windowWidth - menuWidth;
-            if (y + menuHeight > windowHeight) y = windowHeight - menuHeight;
-            if (x < 0) x = 0;
-            if (y < 0) y = 0;
+            if (contextMenuX + menuWidth > windowWidth) contextMenuX = windowWidth - menuWidth;
+            if (contextMenuY + menuHeight > windowHeight) contextMenuY = windowHeight - menuHeight;
+            if (contextMenuX < 0) contextMenuX = 0;
+            if (contextMenuY < 0) contextMenuY = 0;
 
-            menu.style.left = `${x}px`;
-            menu.style.top = `${y}px`;
+            menu.style.left = `${contextMenuX}px`;
+            menu.style.top = `${contextMenuY}px`;
         }
-        document.addEventListener('contextmenu', rClick);
+        document.addEventListener('contextmenu', showContextMenu);
 
-        document.getElementById('menu-item-1').addEventListener('click', function() {
+        document.getElementById('context-menu-new-polygon').addEventListener('click', () => {
             isDrawing = true;
-            drawPolygon.enable();
-            document.getElementById('custom-context-menu').style.display = 'none';
+            polygonDrawer.enable();
+            document.getElementById('context-menu').style.display = 'none';
         });
 
-        document.getElementById('menu-item-2').addEventListener('click', function() {
-            document.getElementById('style').style.display = 'flex';
-            document.getElementById('custom-context-menu').style.display = 'none';
+        document.getElementById('context-menu-new-marker').addEventListener('click', () => {
+            isDrawing = true;
+            markerDrawer.enable();
+            document.getElementById('context-menu').style.display = 'none';
         });
 
-        document.getElementById('menu-item-3').addEventListener('click', function() {
-            document.getElementById('about').style.display = 'flex';
-            document.getElementById('custom-context-menu').style.display = 'none';
+        document.getElementById('context-menu-settings').addEventListener('click', () => {
+            document.getElementById('settings-modal').style.display = 'flex';
+            document.getElementById('context-menu').style.display = 'none';
         });
 
-        var featureGroupForEditing = new L.FeatureGroup().addTo(map);
-        var currentEditHandler = null;
+        document.getElementById('context-menu-share').addEventListener('click', () => {
+            document.getElementById('share-modal').style.display = 'flex';
+            document.getElementById('context-menu').style.display = 'none';
+            updateShareUrl();
+        });
 
-        document.getElementById('menu-item-4').addEventListener('click', function() {
-            if (selectedPolygon && selectedPolygon.isCustomPolygon) {
-                removeEmergencyDash(selectedPolygon);
-                if (warningsLayer.hasLayer(selectedPolygon)) {
-                    warningsLayer.removeLayer(selectedPolygon);
-                } else if (counties.hasLayer(selectedPolygon)) {
-                    counties.removeLayer(selectedPolygon);
+        document.getElementById('context-menu-about').addEventListener('click', () => {
+            document.getElementById('about-modal').style.display = 'flex';
+            document.getElementById('context-menu').style.display = 'none';
+        });
+
+        const featureGroupForEditing = new L.FeatureGroup().addTo(map);
+        let currentEditHandler = null;
+
+        document.getElementById('context-menu-edit').addEventListener('click', () => {
+            let layerToEdit = selectedPolygon || selectedMarker;
+            if (layerToEdit && (layerToEdit.isCustomPolygon || layerToEdit.isCustomMarker)) {
+                if (layerToEdit.isCustomPolygon) {
+                   removeEmergencyDash(layerToEdit);
+                   if (warningPolygonsLayer.hasLayer(layerToEdit)) warningPolygonsLayer.removeLayer(layerToEdit);
+                   else if (countyBoundariesLayer.hasLayer(layerToEdit)) countyBoundariesLayer.removeLayer(layerToEdit);
+                } else {
+                   if (warningMarkersLayer.hasLayer(layerToEdit)) warningMarkersLayer.removeLayer(layerToEdit);
+                   else if (customMarkersLayer.hasLayer(layerToEdit)) customMarkersLayer.removeLayer(layerToEdit);
                 }
-                featureGroupForEditing.addLayer(selectedPolygon);
-                currentEditHandler = new L.EditToolbar.Edit(map, {
-                    featureGroup: featureGroupForEditing
-                });
+                featureGroupForEditing.addLayer(layerToEdit);
+                currentEditHandler = new L.EditToolbar.Edit(map, { featureGroup: featureGroupForEditing });
                 currentEditHandler.enable();
             }
-            document.getElementById('custom-context-menu').style.display = 'none';
+            document.getElementById('context-menu').style.display = 'none';
         });
 
-        document.getElementById('menu-item-5').addEventListener('click', function() {
+        document.getElementById('context-menu-delete').addEventListener('click', () => {
             if (selectedPolygon && selectedPolygon.isCustomPolygon) {
                 removeEmergencyDash(selectedPolygon);
-                if (warningsLayer.hasLayer(selectedPolygon)) {
-                    warningsLayer.removeLayer(selectedPolygon);
-                } else if (counties.hasLayer(selectedPolygon)) {
-                    counties.removeLayer(selectedPolygon);
-                }
+                if (warningPolygonsLayer.hasLayer(selectedPolygon)) warningPolygonsLayer.removeLayer(selectedPolygon);
+                if (countyBoundariesLayer.hasLayer(selectedPolygon)) countyBoundariesLayer.removeLayer(selectedPolygon);
             }
-            document.getElementById('custom-context-menu').style.display = 'none';
+            if (selectedMarker && selectedMarker.isCustomMarker) {
+                if (warningMarkersLayer.hasLayer(selectedMarker)) warningMarkersLayer.removeLayer(selectedMarker);
+                if (customMarkersLayer.hasLayer(selectedMarker)) customMarkersLayer.removeLayer(selectedMarker);
+            }
+            document.getElementById('context-menu').style.display = 'none';
         });
 
-        var drawControl = new L.Control.Draw({ edit: false, draw: false });
-        map.addControl(drawControl);
+        const polygonDrawer = new L.Draw.Polygon(map, {});
+        const markerDrawer = new L.Draw.Marker(map, {
+            icon: new L.DivIcon({ className: 'leaflet-draw-marker-icon', iconSize: [20, 20] })
+        });
 
-        var drawPolygon = new L.Draw.Polygon(map, drawControl.options.draw.polygon);
-
-        map.on('draw:created', function(e) {
+        map.on('draw:created', (event) => {
             isDrawing = false;
-            var layer = e.layer;
-            var polygon = L.polygon(reverseSubarrays(layer.toGeoJSON()['geometry']['coordinates'][0]), {
-                color: 'black',
-                pane: 'counties',
-                fillOpacity: 0
-            }).addTo(counties);
-            polygon.customColor = 'no';
-            polygon.isCustomPolygon = true;
+            const type = event.layerType;
+            const layer = event.layer;
+            
+            if (type === 'polygon') {
+                const polygon = L.polygon(reverseSubarrays(layer.toGeoJSON()['geometry']['coordinates'][0]), {
+                    color: 'black', pane: 'counties', fillOpacity: 0, weight: 2
+                }).addTo(countyBoundariesLayer);
+                polygon.customColor = 'no';
+                polygon.isCustomPolygon = true;
+            } else if (type === 'marker') {
+                const marker = L.circleMarker(layer.getLatLng(), {
+                    radius: 6, color: 'black', weight: 2, fillColor: 'grey', fillOpacity: 0.5, pane: 'counties'
+                }).addTo(customMarkersLayer);
+                marker.customColor = 'no';
+                marker.isCustomMarker = true;
+            }
         });
 
-        map.on('draw:canceled', function(e) {
-            isDrawing = false;
-        });
+        map.on('draw:canceled', () => isDrawing = false);
         
-        map.on(L.Draw.Event.EDITSTOP, function(e) {
+        map.on(L.Draw.Event.EDITSTOP, () => {
             const layersToAddBack = [];
             featureGroupForEditing.eachLayer(layer => {
                 layersToAddBack.push(layer);
-                if (layer.customColor === 'yes' && layer.levelPreset === 'emergency') {
+                 if (layer instanceof L.Polygon && layer.customColor === 'yes' && layer.levelPreset === 'emergency') {
                     createEmergencyDash(layer);
                 }
             });
             featureGroupForEditing.clearLayers();
             layersToAddBack.forEach(layer => {
-                if (layer.customColor === 'yes') {
-                    warningsLayer.addLayer(layer);
+                const isWarning = layer.customColor === 'yes';
+                const isPolygon = layer instanceof L.Polygon;
+                if (isWarning) {
+                    if(isPolygon) warningPolygonsLayer.addLayer(layer);
+                    else warningMarkersLayer.addLayer(layer);
                 } else {
-                    counties.addLayer(layer);
+                    if(isPolygon) countyBoundariesLayer.addLayer(layer);
+                    else customMarkersLayer.addLayer(layer);
                 }
             });
             currentEditHandler = null;
         });
 
-        map.on('contextmenu', function(e) {
-            var clickedPoint = e.latlng;
-            var clickedPointGeoJSON = turf.point([clickedPoint.lng, clickedPoint.lat]);
-            var foundPolygon = false;
+        map.on('contextmenu', (event) => {
+            const clickedPoint = event.latlng;
+            const clickedPointGeoJSON = turf.point([clickedPoint.lng, clickedPoint.lat]);
+            let foundPolygon = false;
+            let foundMarker = false;
             selectedPolygon = null;
+            selectedMarker = null;
 
-            var menuItem4 = document.getElementById('menu-item-4');
-            var menuItem5 = document.getElementById('menu-item-5');
+            const editMenuItem = document.getElementById('context-menu-edit');
+            const deleteMenuItem = document.getElementById('context-menu-delete');
 
-            var checkLayers = function(layer) {
+            const checkMarker = (marker) => {
+                if (foundMarker) return;
+                const center = marker.getLatLng();
+                const radius = marker.getRadius();
+                const distance = map.latLngToLayerPoint(center).distanceTo(map.latLngToLayerPoint(clickedPoint));
+                if (distance <= radius) {
+                    foundMarker = true;
+                    selectedMarker = marker;
+                }
+            };
+
+            warningMarkersLayer.eachLayer(checkMarker);
+            if (!foundMarker) customMarkersLayer.eachLayer(checkMarker);
+
+            const checkPolygon = (layer) => {
                 if (foundPolygon || !(layer instanceof L.Polygon)) return;
                 if (turf.booleanPointInPolygon(clickedPointGeoJSON, layer.toGeoJSON())) {
                     foundPolygon = true;
                     selectedPolygon = layer;
                 }
             };
-
-            warningsLayer.getLayers().slice().reverse().forEach(checkLayers);
-            if (!foundPolygon) {
-                counties.getLayers().slice().reverse().forEach(checkLayers);
+            
+            if (!foundMarker) {
+                warningPolygonsLayer.getLayers().slice().reverse().forEach(checkPolygon);
+                if (!foundPolygon) {
+                    countyBoundariesLayer.getLayers().slice().reverse().forEach(checkPolygon);
+                }
             }
 
-            if (foundPolygon) {
-                var isCustom = !!selectedPolygon.isCustomPolygon;
-                menuItem4.style.display = isCustom ? 'flex' : 'none';
-                menuItem5.style.display = isCustom ? 'flex' : 'none';
-            } else {
-                menuItem4.style.display = 'none';
-                menuItem5.style.display = 'none';
-            }
+            const isCustom = (selectedPolygon && selectedPolygon.isCustomPolygon) || (selectedMarker && selectedMarker.isCustomMarker);
+            editMenuItem.style.display = isCustom ? 'flex' : 'none';
+            deleteMenuItem.style.display = isCustom ? 'flex' : 'none';
         });
 
-        map.on('click', function(e) {
-            var contextMenu = document.getElementById('custom-context-menu');
+        map.on('click', (event) => {
+            const contextMenu = document.getElementById('context-menu');
             if (contextMenu.style.display !== 'none') {
                 contextMenu.style.display = 'none';
                 return;
             }
+            if (isSharedMode || isDrawing || currentEditHandler) return;
 
-            if (isDrawing || currentEditHandler) return;
+            const clickedPoint = event.latlng;
+            const clickedPointGeoJSON = turf.point([clickedPoint.lng, clickedPoint.lat]);
+            let handled = false;
 
-            var clickedPoint = e.latlng;
-            var clickedPointGeoJSON = turf.point([clickedPoint.lng, clickedPoint.lat]);
-            var handled = false;
+            warningMarkersLayer.eachLayer(marker => {
+                if (handled) return;
+                const center = marker.getLatLng();
+                const radius = marker.getRadius();
+                const distance = map.latLngToLayerPoint(center).distanceTo(map.latLngToLayerPoint(clickedPoint));
+                if (distance <= radius) {
+                    handled = true;
+                    warningMarkersLayer.removeLayer(marker);
+                    marker.setStyle({ radius: 6, color: 'black', weight: 2, fillColor: 'grey', fillOpacity: 0.5 });
+                    marker.customColor = 'no';
+                    marker.levelPreset = null;
+                    marker.baseColor = null;
+                    customMarkersLayer.addLayer(marker);
+                }
+            });
+            if(handled) return;
 
-            var reversedWarnings = warningsLayer.getLayers().slice().reverse();
-            reversedWarnings.forEach(function(layer) {
+            warningPolygonsLayer.getLayers().slice().reverse().forEach(layer => {
                 if (handled || !(layer instanceof L.Polygon)) return;
                 if (turf.booleanPointInPolygon(clickedPointGeoJSON, layer.toGeoJSON())) {
                     handled = true;
-                    warningsLayer.removeLayer(layer);
+                    warningPolygonsLayer.removeLayer(layer);
                     removeEmergencyDash(layer);
-                    layer.setStyle({ fillOpacity: 0, color: 'black', weight: 2 });
+                    const newWeight = layer.isCustomPolygon ? 2 : 0;
+                    layer.setStyle({ fillOpacity: 0, color: 'black', weight: newWeight });
                     layer.customColor = 'no';
                     layer.levelPreset = null;
                     layer.baseColor = null;
                     delete layer.options.baseWeight;
-                    counties.addLayer(layer);
+                    countyBoundariesLayer.addLayer(layer);
                 }
             });
-
             if (handled) return;
 
-            var reversedCounties = counties.getLayers().slice().reverse();
-            reversedCounties.forEach(function(layer) {
+            customMarkersLayer.eachLayer(marker => {
+                 if (handled) return;
+                const center = marker.getLatLng();
+                const radius = marker.getRadius();
+                const distance = map.latLngToLayerPoint(center).distanceTo(map.latLngToLayerPoint(clickedPoint));
+                if (distance <= radius) {
+                    handled = true;
+                    customMarkersLayer.removeLayer(marker);
+                    marker.customColor = 'yes';
+                    marker.levelPreset = document.getElementById('level-preset-select').value;
+                    marker.baseColor = activeColor;
+                    marker.setStyle({ fillOpacity: activeOpacity + 0.2, fillColor: marker.baseColor, color: marker.baseColor, weight: 2 });
+                    warningMarkersLayer.addLayer(marker);
+                }
+            });
+            if(handled) return;
+            
+            countyBoundariesLayer.getLayers().slice().reverse().forEach(layer => {
                 if (handled || !(layer instanceof L.Polygon)) return;
                 if (turf.booleanPointInPolygon(clickedPointGeoJSON, layer.toGeoJSON())) {
                     handled = true;
-                    counties.removeLayer(layer);
+                    countyBoundariesLayer.removeLayer(layer);
                     layer.customColor = 'yes';
-                    layer.levelPreset = document.getElementById('levelPreset').value;
-                    layer.baseColor = clickColor;
+                    layer.levelPreset = document.getElementById('level-preset-select').value;
+                    layer.baseColor = activeColor;
                     layer.options.baseWeight = 2;
-                    if (layer.levelPreset === 'emergency') {
-                        createEmergencyDash(layer);
-                    }
-                    layer.setStyle({
-                        fillOpacity: clickOpacity,
-                        fillColor: layer.baseColor,
-                        color: layer.baseColor,
-                        weight: layer.options.baseWeight
-                    });
-                    warningsLayer.addLayer(layer);
+                    if (layer.levelPreset === 'emergency') createEmergencyDash(layer);
+                    layer.setStyle({ fillOpacity: activeOpacity, fillColor: layer.baseColor, color: layer.baseColor, weight: layer.options.baseWeight });
+                    warningPolygonsLayer.addLayer(layer);
                 }
             });
         });
 
-        document.addEventListener('keydown', function(e) {
-            if (document.activeElement && (document.activeElement.isContentEditable || /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))) {
-                return;
-            }
+        document.addEventListener('keydown', (event) => {
+            if (document.activeElement && (document.activeElement.isContentEditable || /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))) return;
 
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                if (isDrawing) drawPolygon.completeShape();
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                if (isDrawing) {
+                    if (polygonDrawer.enabled()) polygonDrawer.completeShape();
+                    if (markerDrawer.enabled()) markerDrawer.completeShape();
+                }
                 if (currentEditHandler) {
                     currentEditHandler.save();
                     currentEditHandler.disable();
                 }
-            } else if (e.key === 'Escape') {
-                e.preventDefault();
+            } else if (event.key === 'Escape') {
+                event.preventDefault();
                 if (isDrawing) {
-                    drawPolygon.disable();
+                    polygonDrawer.disable();
+                    markerDrawer.disable();
                     isDrawing = false;
                 }
                 if (currentEditHandler) {
@@ -550,63 +643,60 @@
             }
         });
 
-        document.getElementById('closeSettings').addEventListener('click', () => document.getElementById('style').style.display = 'none');
-        document.getElementById('closeAbout').addEventListener('click', () => document.getElementById('about').style.display = 'none');
+        document.getElementById('close-settings-button').addEventListener('click', () => document.getElementById('settings-modal').style.display = 'none');
+        document.getElementById('close-about-button').addEventListener('click', () => document.getElementById('about-modal').style.display = 'none');
+        document.getElementById('close-share-button').addEventListener('click', () => document.getElementById('share-modal').style.display = 'none');
         
-        var timeouter = null;
-        window.addEventListener('resize', function(event) {
-            let vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
-            let vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
-            const sizer = document.getElementById("sizer");
+        let resizeTimeout = null;
+        window.addEventListener('resize', () => {
+            let viewportWidth = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+            let viewportHeight = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
+            const sizer = document.getElementById("viewport-sizer");
             sizer.style.display = 'flex';
-            sizer.innerHTML = "<b>" + vw + "</b> x <b>" + vh + "</b>";
-            clearTimeout(timeouter);
-            timeouter = setTimeout(() => { sizer.style.display = 'none'; }, 1500);
+            sizer.innerHTML = `<b>${viewportWidth}</b> x <b>${viewportHeight}</b>`;
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => { sizer.style.display = 'none'; }, 1500);
         });
 
-        const editableOverlay = document.getElementById('editableOverlay');
-        const loader = document.getElementById('loader');
-        const styleMenu = document.getElementById('style');
-        const aboutMenu = document.getElementById('about');
+        const textOverlay = document.getElementById('text-overlay');
+        const loaderOverlay = document.getElementById('loader-overlay');
+        const settingsModal = document.getElementById('settings-modal');
+        const shareModal = document.getElementById('share-modal');
+        const aboutModal = document.getElementById('about-modal');
 
         function updateOverlayVisibility() {
-            const isModalOpen = loader.style.display !== 'none' || styleMenu.style.display !== 'none' || aboutMenu.style.display !== 'none';
-            editableOverlay.style.display = isModalOpen ? 'none' : 'block';
+            const isModalOpen = loaderOverlay.style.display !== 'none' || settingsModal.style.display !== 'none' || aboutModal.style.display !== 'none' || shareModal.style.display !== 'none';
+            textOverlay.style.display = isModalOpen ? 'none' : 'block';
         }
 
-        const observer = new MutationObserver(updateOverlayVisibility);
+        const modalObserver = new MutationObserver(updateOverlayVisibility);
         const observerConfig = { attributes: true, attributeFilter: ['style'] };
-        observer.observe(loader, observerConfig);
-        observer.observe(styleMenu, observerConfig);
-        observer.observe(aboutMenu, observerConfig);
+        modalObserver.observe(loaderOverlay, observerConfig);
+        modalObserver.observe(settingsModal, observerConfig);
+        modalObserver.observe(aboutModal, observerConfig);
+        modalObserver.observe(shareModal, observerConfig);
         updateOverlayVisibility();
 
         const DEFAULT_OPACITY = 0.3;
 
-        function updateCurrentStyle() {
-            const presetSelect = document.getElementById('stylePreset');
-            clickColor = (presetSelect.value === 'custom') 
-                ? document.getElementById('styleColor').value 
+        function updateActiveStyle() {
+            const presetSelect = document.getElementById('color-preset-select');
+            activeColor = (presetSelect.value === 'custom') 
+                ? document.getElementById('custom-color-input').value 
                 : presetSelect.value;
-            clickOpacity = DEFAULT_OPACITY;
+            activeOpacity = DEFAULT_OPACITY;
         }
         
-        document.getElementById('stylePreset').addEventListener('change', function() {
-            const customColorPicker = document.getElementById('customColorPicker');
-            customColorPicker.style.display = (this.value === 'custom') ? 'flex' : 'none';
-            if (this.value !== 'custom') {
-                document.getElementById('styleColor').value = this.value;
-            }
-            updateCurrentStyle();
+        document.getElementById('color-preset-select').addEventListener('change', function() {
+            document.getElementById('custom-color-picker-container').style.display = (this.value === 'custom') ? 'flex' : 'none';
+            if (this.value !== 'custom') document.getElementById('custom-color-input').value = this.value;
+            updateActiveStyle();
         });
 
-        document.getElementById('styleColor').addEventListener('input', () => {
-             if (document.getElementById('stylePreset').value === 'custom') {
-                updateCurrentStyle();
-            }
+        document.getElementById('custom-color-input').addEventListener('input', () => {
+             if (document.getElementById('color-preset-select').value === 'custom') updateActiveStyle();
         });
-
-        updateCurrentStyle();
+        updateActiveStyle();
 
         function getPulseSize(preset) {
             switch (preset) {
@@ -620,50 +710,150 @@
 
         function createEmergencyDash(originalLayer) {
             removeEmergencyDash(originalLayer);
-            var dashPoly = L.polygon(originalLayer.getLatLngs(), {
-                color: 'white',
-                weight: 4,
-                fill: false,
-                dashArray: '8, 24',
-                interactive: false,
+            const dashPoly = L.polygon(originalLayer.getLatLngs(), {
+                color: 'white', weight: 4, fill: false, dashArray: '8, 24', interactive: false,
             });
             dashPoly.original_id = originalLayer._leaflet_id;
             emergencyDashesGroup.addLayer(dashPoly);
         }
 
         function removeEmergencyDash(originalLayer) {
-            var layerToRemove = null;
-            emergencyDashesGroup.eachLayer(function(dashLayer) {
-                if (dashLayer.original_id === originalLayer._leaflet_id) {
-                    layerToRemove = dashLayer;
-                }
+            let layerToRemove = null;
+            emergencyDashesGroup.eachLayer(dashLayer => {
+                if (dashLayer.original_id === originalLayer._leaflet_id) layerToRemove = dashLayer;
             });
-            if (layerToRemove) {
-                emergencyDashesGroup.removeLayer(layerToRemove);
-            }
+            if (layerToRemove) emergencyDashesGroup.removeLayer(layerToRemove);
         }
         
-        function animateAllPolygons() {
+        function animateAllShapes() {
             const cycleDuration = 2000;
             const timeInCycle = Date.now() % cycleDuration;
-            let amplitude = (timeInCycle < cycleDuration / 2) 
+            const amplitude = (timeInCycle < cycleDuration / 2) 
                 ? (timeInCycle / (cycleDuration / 2)) 
                 : ((cycleDuration - timeInCycle) / (cycleDuration / 2));
 
-            warningsLayer.eachLayer(function(layer) {
+            warningPolygonsLayer.eachLayer(layer => {
                 if (layer instanceof L.Polygon && layer.customColor === 'yes' && layer.levelPreset) {
                     const baseWeight = layer.options.baseWeight || 2;
                     const pulseSize = getPulseSize(layer.levelPreset);
-                    if (pulseSize > 0) {
-                        const newWeight = baseWeight + (pulseSize * amplitude);
-                        layer.setStyle({ weight: newWeight });
-                    }
+                    if (pulseSize > 0) layer.setStyle({ weight: baseWeight + (pulseSize * amplitude) });
+                }
+            });
+            
+            warningMarkersLayer.eachLayer(layer => {
+                if (layer instanceof L.CircleMarker && layer.customColor === 'yes' && layer.levelPreset) {
+                    const baseRadius = 6;
+                    const pulseSize = getPulseSize(layer.levelPreset);
+                     if (pulseSize > 0) layer.setRadius(baseRadius + (pulseSize * amplitude));
                 }
             });
         }
-        
-        setInterval(animateAllPolygons, 50);
+        setInterval(animateAllShapes, 50);
 
+        function enterSharedMode() {
+            isSharedMode = true;
+            const titleElement = document.querySelector('.text-overlay h2');
+            const textElement = document.querySelector('.text-overlay p');
+            titleElement.contentEditable = false;
+            textElement.contentEditable = false;
+            titleElement.classList.add('no-edit');
+            textElement.classList.add('no-edit');
+            document.getElementById('context-menu-new-polygon').style.display = 'none';
+            document.getElementById('context-menu-new-marker').style.display = 'none';
+            document.getElementById('context-menu-settings').style.display = 'none';
+            document.getElementById('context-menu-edit').style.display = 'none';
+            document.getElementById('context-menu-delete').style.display = 'none';
+            document.getElementById('context-menu-share').style.display = 'none';
+        }
+
+        function updateShareUrl() {
+            const shareSettings = document.getElementById('share-settings-checkbox').checked;
+            const dataToShare = { polygons: [], markers: [], text: {} };
+
+            warningPolygonsLayer.eachLayer(layer => {
+                if (layer instanceof L.Polygon && layer.customColor === 'yes') {
+                    dataToShare.polygons.push({
+                        latlngs: layer.getLatLngs(), color: layer.baseColor, level: layer.levelPreset
+                    });
+                }
+            });
+            warningMarkersLayer.eachLayer(layer => {
+                 if (layer instanceof L.CircleMarker && layer.customColor === 'yes') {
+                    dataToShare.markers.push({
+                        latlng: layer.getLatLng(), color: layer.baseColor, level: layer.levelPreset
+                    });
+                }
+            });
+            dataToShare.text.h2 = document.querySelector('.text-overlay h2').innerHTML;
+            dataToShare.text.p = document.querySelector('.text-overlay p').innerHTML;
+
+            if (shareSettings) {
+                dataToShare.settings = {
+                    mapStyle: (currentThemeLayer === lightThemeLayer) ? 'light' : 'dark',
+                    radar: map.hasLayer(radarLayer),
+                    zoom: map.getZoom(),
+                    center: map.getCenter()
+                };
+            }
+            
+            const jsonString = JSON.stringify(dataToShare);
+            const encodedData = btoa(unescape(encodeURIComponent(jsonString)));
+            document.getElementById('share-url-input').value = `?data=${encodedData}`;
+        }
+
+        function loadDataFromUrl() {
+            const data = new URLSearchParams(window.location.search).get('data');
+            if (!data) return;
+
+            try {
+                const decodedData = decodeURIComponent(escape(atob(data)));
+                const sharedData = JSON.parse(decodedData);
+                enterSharedMode();
+
+                if (sharedData.text) {
+                    if (sharedData.text.h2) document.querySelector('.text-overlay h2').innerHTML = sharedData.text.h2;
+                    if (sharedData.text.p) document.querySelector('.text-overlay p').innerHTML = sharedData.text.p;
+                }
+                if (sharedData.polygons && Array.isArray(sharedData.polygons)) {
+                    sharedData.polygons.forEach(p => {
+                        const polygon = L.polygon(p.latlngs, { isCustomPolygon: true }).addTo(warningPolygonsLayer);
+                        polygon.customColor = 'yes';
+                        polygon.levelPreset = p.level;
+                        polygon.baseColor = p.color;
+                        polygon.options.baseWeight = 2; 
+                        polygon.setStyle({ fillOpacity: activeOpacity, fillColor: polygon.baseColor, color: polygon.baseColor, weight: polygon.options.baseWeight });
+                        if (polygon.levelPreset === 'emergency') createEmergencyDash(polygon);
+                    });
+                }
+                if (sharedData.markers && Array.isArray(sharedData.markers)) {
+                     sharedData.markers.forEach(m => {
+                        const marker = L.circleMarker(m.latlng, { isCustomMarker: true }).addTo(warningMarkersLayer);
+                        marker.customColor = 'yes';
+                        marker.levelPreset = m.level;
+                        marker.baseColor = m.color;
+                        marker.setStyle({ fillOpacity: activeOpacity + 0.2, fillColor: marker.baseColor, color: marker.baseColor, weight: 2, radius: 6 });
+                    });
+                }
+                if (sharedData.settings) {
+                    if (sharedData.settings.center && sharedData.settings.zoom) {
+                        map.setView(sharedData.settings.center, sharedData.settings.zoom);
+                    }
+                    const themeToggleCheckbox = document.getElementById('theme-toggle-checkbox');
+                    const wantsLightTheme = sharedData.settings.mapStyle === 'light';
+                    const isCurrentlyLight = currentThemeLayer === lightThemeLayer;
+                    if (wantsLightTheme !== isCurrentlyLight) toggleMapTheme();
+                    themeToggleCheckbox.checked = wantsLightTheme;
+
+                    const radarToggleCheckbox = document.getElementById('radar-toggle-checkbox');
+                    const wantsRadar = sharedData.settings.radar;
+                    if (wantsRadar !== map.hasLayer(radarLayer)) toggleRadarLayer({ checked: wantsRadar });
+                    radarToggleCheckbox.checked = wantsRadar;
+                }
+            } catch (error) {
+                console.error("Failed to parse shared data from URL:", error);
+                alert("Could not load the shared alert. The data may be corrupted.");
+            }
+        }
     </script>
 </body>
 
