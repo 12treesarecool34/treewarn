@@ -1,28 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <title>TreeWarn</title>
     <link rel="icon" href="https://raw.githubusercontent.com/microsoft/fluentui-emoji/refs/heads/main/assets/Deciduous%20tree/3D/deciduous_tree_3d.png" />
-
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.2/leaflet.draw.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.2/leaflet.draw.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/5.1.6/turf.min.js"></script>
-
     <link href="https://unpkg.com/maplibre-gl@4.1.2/dist/maplibre-gl.css" rel="stylesheet" />
     <script src="https://unpkg.com/maplibre-gl@4.1.2/dist/maplibre-gl.js"></script>
     <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.21/leaflet-maplibre-gl.js"></script>
-
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap" rel="stylesheet">
-
     <style>
         * {
             font-family: 'Outfit', sans-serif;
@@ -132,20 +126,16 @@
         }
     </style>
 </head>
-
 <body>
     <div id="content">
         <div id="map-container"></div>
-
         <div class="text-overlay" id="text-overlay">
             <h2 contenteditable="true" spellcheck="false">Alert Title</h2>
             <p contenteditable="true" spellcheck="false">Alert Text</p>
         </div>
-
         <div id="loader-overlay" style="z-index: 100; flex-direction: column; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: black; color: white; display: flex; align-items: center; justify-content: center;">
             <h2>Loading...</h2>
         </div>
-
         <div id="settings-modal" style="z-index: 100; overflow-y: auto; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgb(20, 20, 20, 0.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); color: white; display: none;">
             <div style="display: flex; flex-direction: column; width: 100%; max-width: 100%; padding: 20px; box-sizing: border-box;">
                 <h1>Settings</h1>
@@ -193,7 +183,6 @@
                 </div>
             </div>
         </div>
-
         <div id="share-modal" style="z-index: 100; overflow-y: auto; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgb(20, 20, 20, 0.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); color: white; display: none;">
             <div style="display: flex; flex-direction: column; width: 100%; max-width: 100%; padding: 20px; box-sizing: border-box;">
                 <h1>Share</h1>
@@ -209,7 +198,6 @@
                 </div>
             </div>
         </div>
-
         <div id="about-modal" style="z-index: 100; overflow-y: auto; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgb(20, 20, 20, 0.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); color: white; display: none;">
             <div style="display: flex; flex-direction: column; width: 100%; max-width: 100%; padding: 20px; box-sizing: border-box;">
                 <h1>About TreeWarn</h1>
@@ -221,7 +209,6 @@
                 </div>
             </div>
         </div>
-
         <div id="context-menu" class="context-menu">
             <ul>
                 <li id="context-menu-new-polygon"><i class="material-symbols-outlined">add</i>New Polygon</li>
@@ -233,12 +220,7 @@
                 <li id="context-menu-share"><i class="material-symbols-outlined">share</i>Share</li>
             </ul>
         </div>
-
-        <div id="viewport-sizer" style="font-size: larger; z-index: 1000; justify-content: center; flex-direction: row; position: absolute; top: 0px; left: 0px; width: 100%; height: 100%; background: rgb(20, 20, 20, 0.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); color: white; display: none; align-items: center;">
-            200x200
-        </div>
     </div>
-
     <script>
         const map = L.map(document.getElementById("map-container"), {
             preferCanvas: true,
@@ -254,7 +236,9 @@
         const bounds = L.latLngBounds(southWest, northEast);
         map.setMaxBounds(bounds);
         map.on('drag', function() {
-            map.panInsideBounds(bounds, { animate: false });
+            map.panInsideBounds(bounds, {
+                animate: false
+            });
         });
 
         map.createPane('radar');
@@ -262,18 +246,26 @@
         map.createPane('cities');
         map.getPane('cities').style.zIndex = 400;
         map.createPane('dashedLines');
-        map.getPane('dashedLines').style.zIndex = 399;
+        map.getPane('dashedLines').style.zIndex = 401;
         map.createPane('warnings');
         map.getPane('warnings').style.zIndex = 398;
         map.createPane('counties');
         map.getPane('counties').style.zIndex = 301;
 
-        const emergencyDashesGroup = new L.FeatureGroup([], { pane: 'dashedLines' }).addTo(map);
-        const warningPolygonsLayer = L.featureGroup([], { pane: 'warnings' }).addTo(map);
-        const customMarkersLayer = L.featureGroup([], { pane: 'counties' }).addTo(map);
-        const warningMarkersLayer = L.featureGroup([], { pane: 'warnings' }).addTo(map);
+        const emergencyDashesGroup = new L.FeatureGroup([], {
+            pane: 'dashedLines'
+        }).addTo(map);
+        const warningPolygonsLayer = L.featureGroup([], {
+            pane: 'warnings'
+        }).addTo(map);
+        const customMarkersLayer = L.featureGroup([], {
+            pane: 'counties'
+        }).addTo(map);
+        const warningMarkersLayer = L.featureGroup([], {
+            pane: 'warnings'
+        }).addTo(map);
         let countyBoundariesLayer = L.geoJSON().addTo(map);
-        
+
         L.drawLocal.draw.handlers.polygon.tooltip.start = null;
         L.drawLocal.draw.handlers.polygon.tooltip.cont = null;
         L.drawLocal.draw.handlers.polygon.tooltip.end = null;
@@ -281,7 +273,7 @@
         L.drawLocal.edit.handlers.edit.tooltip.text = null;
         L.drawLocal.edit.handlers.edit.tooltip.subtext = null;
         L.drawLocal.edit.handlers.remove.tooltip.text = null;
-        
+
         const lightThemeLayer = L.maplibreGL({
             style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
             attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
@@ -302,7 +294,9 @@
 
         setInterval(() => {
             if (map.hasLayer(radarLayer)) {
-                radarLayer.setParams({ time: Date.now() });
+                radarLayer.setParams({
+                    time: Date.now()
+                });
             }
         }, 60000);
 
@@ -313,7 +307,7 @@
             currentThemeLayer = (currentThemeLayer === lightThemeLayer) ? darkThemeLayer : lightThemeLayer;
             map.addLayer(currentThemeLayer);
         }
-        
+
         function toggleRadarLayer(checkbox) {
             if (checkbox.checked) {
                 map.addLayer(radarLayer);
@@ -353,7 +347,7 @@
                 document.getElementById("loader-overlay").style.display = "none";
             })
             .catch(error => console.error('Error loading GeoJSON data:', error));
-        
+
         let contextMenuX = 0;
         let contextMenuY = 0;
 
@@ -361,20 +355,16 @@
             event.preventDefault();
             const menu = document.getElementById('context-menu');
             menu.style.display = 'block';
-
             const menuWidth = menu.offsetWidth;
             const menuHeight = menu.offsetHeight;
             const windowWidth = window.innerWidth;
             const windowHeight = window.innerHeight;
-
             contextMenuX = event.clientX;
             contextMenuY = event.clientY;
-
             if (contextMenuX + menuWidth > windowWidth) contextMenuX = windowWidth - menuWidth;
             if (contextMenuY + menuHeight > windowHeight) contextMenuY = windowHeight - menuHeight;
             if (contextMenuX < 0) contextMenuX = 0;
             if (contextMenuY < 0) contextMenuY = 0;
-
             menu.style.left = `${contextMenuX}px`;
             menu.style.top = `${contextMenuY}px`;
         }
@@ -415,15 +405,17 @@
             let layerToEdit = selectedPolygon || selectedMarker;
             if (layerToEdit && (layerToEdit.isCustomPolygon || layerToEdit.isCustomMarker)) {
                 if (layerToEdit.isCustomPolygon) {
-                   removeEmergencyDash(layerToEdit);
-                   if (warningPolygonsLayer.hasLayer(layerToEdit)) warningPolygonsLayer.removeLayer(layerToEdit);
-                   else if (countyBoundariesLayer.hasLayer(layerToEdit)) countyBoundariesLayer.removeLayer(layerToEdit);
+                    removeEmergencyDash(layerToEdit);
+                    if (warningPolygonsLayer.hasLayer(layerToEdit)) warningPolygonsLayer.removeLayer(layerToEdit);
+                    else if (countyBoundariesLayer.hasLayer(layerToEdit)) countyBoundariesLayer.removeLayer(layerToEdit);
                 } else {
-                   if (warningMarkersLayer.hasLayer(layerToEdit)) warningMarkersLayer.removeLayer(layerToEdit);
-                   else if (customMarkersLayer.hasLayer(layerToEdit)) customMarkersLayer.removeLayer(layerToEdit);
+                    if (warningMarkersLayer.hasLayer(layerToEdit)) warningMarkersLayer.removeLayer(layerToEdit);
+                    else if (customMarkersLayer.hasLayer(layerToEdit)) customMarkersLayer.removeLayer(layerToEdit);
                 }
                 featureGroupForEditing.addLayer(layerToEdit);
-                currentEditHandler = new L.EditToolbar.Edit(map, { featureGroup: featureGroupForEditing });
+                currentEditHandler = new L.EditToolbar.Edit(map, {
+                    featureGroup: featureGroupForEditing
+                });
                 currentEditHandler.enable();
             }
             document.getElementById('context-menu').style.display = 'none';
@@ -444,23 +436,33 @@
 
         const polygonDrawer = new L.Draw.Polygon(map, {});
         const markerDrawer = new L.Draw.Marker(map, {
-            icon: new L.DivIcon({ className: 'leaflet-draw-marker-icon', iconSize: [20, 20] })
+            icon: new L.DivIcon({
+                className: 'leaflet-draw-marker-icon',
+                iconSize: [20, 20]
+            })
         });
 
         map.on('draw:created', (event) => {
             isDrawing = false;
             const type = event.layerType;
             const layer = event.layer;
-            
             if (type === 'polygon') {
                 const polygon = L.polygon(reverseSubarrays(layer.toGeoJSON()['geometry']['coordinates'][0]), {
-                    color: 'black', pane: 'counties', fillOpacity: 0, weight: 2
+                    color: 'black',
+                    pane: 'counties',
+                    fillOpacity: 0,
+                    weight: 2
                 }).addTo(countyBoundariesLayer);
                 polygon.customColor = 'no';
                 polygon.isCustomPolygon = true;
             } else if (type === 'marker') {
                 const marker = L.circleMarker(layer.getLatLng(), {
-                    radius: 6, color: 'black', weight: 2, fillColor: 'grey', fillOpacity: 0.5, pane: 'counties'
+                    radius: 6,
+                    color: 'black',
+                    weight: 2,
+                    fillColor: 'grey',
+                    fillOpacity: 0.5,
+                    pane: 'counties'
                 }).addTo(customMarkersLayer);
                 marker.customColor = 'no';
                 marker.isCustomMarker = true;
@@ -468,12 +470,12 @@
         });
 
         map.on('draw:canceled', () => isDrawing = false);
-        
+
         map.on(L.Draw.Event.EDITSTOP, () => {
             const layersToAddBack = [];
             featureGroupForEditing.eachLayer(layer => {
                 layersToAddBack.push(layer);
-                 if (layer instanceof L.Polygon && layer.customColor === 'yes' && layer.levelPreset === 'emergency') {
+                if (layer instanceof L.Polygon && layer.customColor === 'yes' && layer.levelPreset === 'emergency') {
                     createEmergencyDash(layer);
                 }
             });
@@ -482,10 +484,10 @@
                 const isWarning = layer.customColor === 'yes';
                 const isPolygon = layer instanceof L.Polygon;
                 if (isWarning) {
-                    if(isPolygon) warningPolygonsLayer.addLayer(layer);
+                    if (isPolygon) warningPolygonsLayer.addLayer(layer);
                     else warningMarkersLayer.addLayer(layer);
                 } else {
-                    if(isPolygon) countyBoundariesLayer.addLayer(layer);
+                    if (isPolygon) countyBoundariesLayer.addLayer(layer);
                     else customMarkersLayer.addLayer(layer);
                 }
             });
@@ -499,10 +501,8 @@
             let foundMarker = false;
             selectedPolygon = null;
             selectedMarker = null;
-
             const editMenuItem = document.getElementById('context-menu-edit');
             const deleteMenuItem = document.getElementById('context-menu-delete');
-
             const checkMarker = (marker) => {
                 if (foundMarker) return;
                 const center = marker.getLatLng();
@@ -513,10 +513,8 @@
                     selectedMarker = marker;
                 }
             };
-
             warningMarkersLayer.eachLayer(checkMarker);
             if (!foundMarker) customMarkersLayer.eachLayer(checkMarker);
-
             const checkPolygon = (layer) => {
                 if (foundPolygon || !(layer instanceof L.Polygon)) return;
                 if (turf.booleanPointInPolygon(clickedPointGeoJSON, layer.toGeoJSON())) {
@@ -524,14 +522,12 @@
                     selectedPolygon = layer;
                 }
             };
-            
             if (!foundMarker) {
                 warningPolygonsLayer.getLayers().slice().reverse().forEach(checkPolygon);
                 if (!foundPolygon) {
                     countyBoundariesLayer.getLayers().slice().reverse().forEach(checkPolygon);
                 }
             }
-
             const isCustom = (selectedPolygon && selectedPolygon.isCustomPolygon) || (selectedMarker && selectedMarker.isCustomMarker);
             editMenuItem.style.display = isCustom ? 'flex' : 'none';
             deleteMenuItem.style.display = isCustom ? 'flex' : 'none';
@@ -544,11 +540,9 @@
                 return;
             }
             if (isSharedMode || isDrawing || currentEditHandler) return;
-
             const clickedPoint = event.latlng;
             const clickedPointGeoJSON = turf.point([clickedPoint.lng, clickedPoint.lat]);
             let handled = false;
-
             warningMarkersLayer.eachLayer(marker => {
                 if (handled) return;
                 const center = marker.getLatLng();
@@ -557,15 +551,20 @@
                 if (distance <= radius) {
                     handled = true;
                     warningMarkersLayer.removeLayer(marker);
-                    marker.setStyle({ radius: 6, color: 'black', weight: 2, fillColor: 'grey', fillOpacity: 0.5 });
+                    marker.setStyle({
+                        radius: 6,
+                        color: 'black',
+                        weight: 2,
+                        fillColor: 'grey',
+                        fillOpacity: 0.5
+                    });
                     marker.customColor = 'no';
                     marker.levelPreset = null;
                     marker.baseColor = null;
                     customMarkersLayer.addLayer(marker);
                 }
             });
-            if(handled) return;
-
+            if (handled) return;
             warningPolygonsLayer.getLayers().slice().reverse().forEach(layer => {
                 if (handled || !(layer instanceof L.Polygon)) return;
                 if (turf.booleanPointInPolygon(clickedPointGeoJSON, layer.toGeoJSON())) {
@@ -573,7 +572,11 @@
                     warningPolygonsLayer.removeLayer(layer);
                     removeEmergencyDash(layer);
                     const newWeight = layer.isCustomPolygon ? 2 : 0;
-                    layer.setStyle({ fillOpacity: 0, color: 'black', weight: newWeight });
+                    layer.setStyle({
+                        fillOpacity: 0,
+                        color: 'black',
+                        weight: newWeight
+                    });
                     layer.customColor = 'no';
                     layer.levelPreset = null;
                     layer.baseColor = null;
@@ -582,9 +585,8 @@
                 }
             });
             if (handled) return;
-
             customMarkersLayer.eachLayer(marker => {
-                 if (handled) return;
+                if (handled) return;
                 const center = marker.getLatLng();
                 const radius = marker.getRadius();
                 const distance = map.latLngToLayerPoint(center).distanceTo(map.latLngToLayerPoint(clickedPoint));
@@ -594,12 +596,16 @@
                     marker.customColor = 'yes';
                     marker.levelPreset = document.getElementById('level-preset-select').value;
                     marker.baseColor = activeColor;
-                    marker.setStyle({ fillOpacity: activeOpacity + 0.2, fillColor: marker.baseColor, color: marker.baseColor, weight: 2 });
+                    marker.setStyle({
+                        fillOpacity: activeOpacity + 0.2,
+                        fillColor: marker.baseColor,
+                        color: marker.baseColor,
+                        weight: 2
+                    });
                     warningMarkersLayer.addLayer(marker);
                 }
             });
-            if(handled) return;
-            
+            if (handled) return;
             countyBoundariesLayer.getLayers().slice().reverse().forEach(layer => {
                 if (handled || !(layer instanceof L.Polygon)) return;
                 if (turf.booleanPointInPolygon(clickedPointGeoJSON, layer.toGeoJSON())) {
@@ -609,16 +615,20 @@
                     layer.levelPreset = document.getElementById('level-preset-select').value;
                     layer.baseColor = activeColor;
                     layer.options.baseWeight = 2;
-                    if (layer.levelPreset === 'emergency') createEmergencyDash(layer);
-                    layer.setStyle({ fillOpacity: activeOpacity, fillColor: layer.baseColor, color: layer.baseColor, weight: layer.options.baseWeight });
+                    layer.setStyle({
+                        fillOpacity: activeOpacity,
+                        fillColor: layer.baseColor,
+                        color: layer.baseColor,
+                        weight: layer.options.baseWeight
+                    });
                     warningPolygonsLayer.addLayer(layer);
+                    if (layer.levelPreset === 'emergency') createEmergencyDash(layer);
                 }
             });
         });
 
         document.addEventListener('keydown', (event) => {
             if (document.activeElement && (document.activeElement.isContentEditable || /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))) return;
-
             if (event.key === 'Enter') {
                 event.preventDefault();
                 if (isDrawing) {
@@ -646,47 +656,17 @@
         document.getElementById('close-settings-button').addEventListener('click', () => document.getElementById('settings-modal').style.display = 'none');
         document.getElementById('close-about-button').addEventListener('click', () => document.getElementById('about-modal').style.display = 'none');
         document.getElementById('close-share-button').addEventListener('click', () => document.getElementById('share-modal').style.display = 'none');
-        
-        let resizeTimeout = null;
-        window.addEventListener('resize', () => {
-            let viewportWidth = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
-            let viewportHeight = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
-            const sizer = document.getElementById("viewport-sizer");
-            sizer.style.display = 'flex';
-            sizer.innerHTML = `<b>${viewportWidth}</b> x <b>${viewportHeight}</b>`;
-            clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(() => { sizer.style.display = 'none'; }, 1500);
-        });
-
-        const textOverlay = document.getElementById('text-overlay');
-        const loaderOverlay = document.getElementById('loader-overlay');
-        const settingsModal = document.getElementById('settings-modal');
-        const shareModal = document.getElementById('share-modal');
-        const aboutModal = document.getElementById('about-modal');
-
-        function updateOverlayVisibility() {
-            const isModalOpen = loaderOverlay.style.display !== 'none' || settingsModal.style.display !== 'none' || aboutModal.style.display !== 'none' || shareModal.style.display !== 'none';
-            textOverlay.style.display = isModalOpen ? 'none' : 'block';
-        }
-
-        const modalObserver = new MutationObserver(updateOverlayVisibility);
-        const observerConfig = { attributes: true, attributeFilter: ['style'] };
-        modalObserver.observe(loaderOverlay, observerConfig);
-        modalObserver.observe(settingsModal, observerConfig);
-        modalObserver.observe(aboutModal, observerConfig);
-        modalObserver.observe(shareModal, observerConfig);
-        updateOverlayVisibility();
 
         const DEFAULT_OPACITY = 0.3;
 
         function updateActiveStyle() {
             const presetSelect = document.getElementById('color-preset-select');
-            activeColor = (presetSelect.value === 'custom') 
-                ? document.getElementById('custom-color-input').value 
-                : presetSelect.value;
+            activeColor = (presetSelect.value === 'custom') ?
+                document.getElementById('custom-color-input').value :
+                presetSelect.value;
             activeOpacity = DEFAULT_OPACITY;
         }
-        
+
         document.getElementById('color-preset-select').addEventListener('change', function() {
             document.getElementById('custom-color-picker-container').style.display = (this.value === 'custom') ? 'flex' : 'none';
             if (this.value !== 'custom') document.getElementById('custom-color-input').value = this.value;
@@ -694,24 +674,33 @@
         });
 
         document.getElementById('custom-color-input').addEventListener('input', () => {
-             if (document.getElementById('color-preset-select').value === 'custom') updateActiveStyle();
+            if (document.getElementById('color-preset-select').value === 'custom') updateActiveStyle();
         });
         updateActiveStyle();
 
         function getPulseSize(preset) {
             switch (preset) {
-                case 'considerable': return 2;
-                case 'destructive':  return 5;
-                case 'pds':          return 8;
-                case 'emergency':    return 8;
-                default:             return 0;
+                case 'considerable':
+                    return 2;
+                case 'destructive':
+                    return 5;
+                case 'pds':
+                    return 8;
+                case 'emergency':
+                    return 8;
+                default:
+                    return 0;
             }
         }
 
         function createEmergencyDash(originalLayer) {
             removeEmergencyDash(originalLayer);
             const dashPoly = L.polygon(originalLayer.getLatLngs(), {
-                color: 'white', weight: 4, fill: false, dashArray: '8, 24', interactive: false,
+                color: 'white',
+                weight: 4,
+                fill: false,
+                dashArray: '8, 24',
+                interactive: false,
             });
             dashPoly.original_id = originalLayer._leaflet_id;
             emergencyDashesGroup.addLayer(dashPoly);
@@ -724,27 +713,27 @@
             });
             if (layerToRemove) emergencyDashesGroup.removeLayer(layerToRemove);
         }
-        
+
         function animateAllShapes() {
             const cycleDuration = 2000;
             const timeInCycle = Date.now() % cycleDuration;
-            const amplitude = (timeInCycle < cycleDuration / 2) 
-                ? (timeInCycle / (cycleDuration / 2)) 
-                : ((cycleDuration - timeInCycle) / (cycleDuration / 2));
-
+            const amplitude = (timeInCycle < cycleDuration / 2) ?
+                (timeInCycle / (cycleDuration / 2)) :
+                ((cycleDuration - timeInCycle) / (cycleDuration / 2));
             warningPolygonsLayer.eachLayer(layer => {
                 if (layer instanceof L.Polygon && layer.customColor === 'yes' && layer.levelPreset) {
                     const baseWeight = layer.options.baseWeight || 2;
                     const pulseSize = getPulseSize(layer.levelPreset);
-                    if (pulseSize > 0) layer.setStyle({ weight: baseWeight + (pulseSize * amplitude) });
+                    if (pulseSize > 0) layer.setStyle({
+                        weight: baseWeight + (pulseSize * amplitude)
+                    });
                 }
             });
-            
             warningMarkersLayer.eachLayer(layer => {
                 if (layer instanceof L.CircleMarker && layer.customColor === 'yes' && layer.levelPreset) {
                     const baseRadius = 6;
                     const pulseSize = getPulseSize(layer.levelPreset);
-                     if (pulseSize > 0) layer.setRadius(baseRadius + (pulseSize * amplitude));
+                    if (pulseSize > 0) layer.setRadius(baseRadius + (pulseSize * amplitude));
                 }
             });
         }
@@ -768,25 +757,39 @@
 
         function updateShareUrl() {
             const shareSettings = document.getElementById('share-settings-checkbox').checked;
-            const dataToShare = { polygons: [], markers: [], text: {} };
-
-            warningPolygonsLayer.eachLayer(layer => {
-                if (layer instanceof L.Polygon && layer.customColor === 'yes') {
-                    dataToShare.polygons.push({
-                        latlngs: layer.getLatLngs(), color: layer.baseColor, level: layer.levelPreset
-                    });
+            const dataToShare = {
+                polygons: [],
+                markers: [],
+                text: {}
+            };
+            const processedLayerIds = new Set();
+            [...warningPolygonsLayer.getLayers(), ...countyBoundariesLayer.getLayers()].forEach(layer => {
+                if (layer instanceof L.Polygon && !processedLayerIds.has(layer._leaflet_id)) {
+                    if (layer.isCustomPolygon || layer.customColor === 'yes') {
+                        dataToShare.polygons.push({
+                            latlngs: layer.getLatLngs(),
+                            color: layer.baseColor || null,
+                            level: layer.levelPreset || null,
+                            isCustom: !!layer.isCustomPolygon
+                        });
+                        processedLayerIds.add(layer._leaflet_id);
+                    }
                 }
             });
-            warningMarkersLayer.eachLayer(layer => {
-                 if (layer instanceof L.CircleMarker && layer.customColor === 'yes') {
-                    dataToShare.markers.push({
-                        latlng: layer.getLatLng(), color: layer.baseColor, level: layer.levelPreset
-                    });
+            [...warningMarkersLayer.getLayers(), ...customMarkersLayer.getLayers()].forEach(layer => {
+                if (layer instanceof L.CircleMarker && !processedLayerIds.has(layer._leaflet_id)) {
+                    if (layer.isCustomMarker) {
+                        dataToShare.markers.push({
+                            latlng: layer.getLatLng(),
+                            color: layer.baseColor || null,
+                            level: layer.levelPreset || null,
+                        });
+                        processedLayerIds.add(layer._leaflet_id);
+                    }
                 }
             });
             dataToShare.text.h2 = document.querySelector('.text-overlay h2').innerHTML;
             dataToShare.text.p = document.querySelector('.text-overlay p').innerHTML;
-
             if (shareSettings) {
                 dataToShare.settings = {
                     mapStyle: (currentThemeLayer === lightThemeLayer) ? 'light' : 'dark',
@@ -795,43 +798,114 @@
                     center: map.getCenter()
                 };
             }
-            
             const jsonString = JSON.stringify(dataToShare);
-            const encodedData = btoa(unescape(encodeURIComponent(jsonString)));
+            const encodedData = btoa(encodeURIComponent(jsonString).replace(/%([0-9A-F]{2})/g,
+                function toSolidBytes(match, p1) {
+                    return String.fromCharCode('0x' + p1);
+                }));
             document.getElementById('share-url-input').value = `?data=${encodedData}`;
         }
 
         function loadDataFromUrl() {
             const data = new URLSearchParams(window.location.search).get('data');
             if (!data) return;
-
             try {
-                const decodedData = decodeURIComponent(escape(atob(data)));
+                const decodedData = decodeURIComponent(atob(data).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
                 const sharedData = JSON.parse(decodedData);
                 enterSharedMode();
-
                 if (sharedData.text) {
                     if (sharedData.text.h2) document.querySelector('.text-overlay h2').innerHTML = sharedData.text.h2;
                     if (sharedData.text.p) document.querySelector('.text-overlay p').innerHTML = sharedData.text.p;
                 }
                 if (sharedData.polygons && Array.isArray(sharedData.polygons)) {
                     sharedData.polygons.forEach(p => {
-                        const polygon = L.polygon(p.latlngs, { isCustomPolygon: true }).addTo(warningPolygonsLayer);
-                        polygon.customColor = 'yes';
-                        polygon.levelPreset = p.level;
-                        polygon.baseColor = p.color;
-                        polygon.options.baseWeight = 2; 
-                        polygon.setStyle({ fillOpacity: activeOpacity, fillColor: polygon.baseColor, color: polygon.baseColor, weight: polygon.options.baseWeight });
-                        if (polygon.levelPreset === 'emergency') createEmergencyDash(polygon);
+                        let polygonToStyle;
+                        if (p.isCustom) {
+                            polygonToStyle = L.polygon(p.latlngs, {
+                                isCustomPolygon: true
+                            });
+                        } else {
+                            try {
+                                const tempGeoJSON = {
+                                    type: 'Polygon',
+                                    coordinates: p.latlngs.map(ring => ring.map(latlng => [latlng.lng, latlng.lat]))
+                                };
+                                const center = turf.centerOfMass(tempGeoJSON);
+                                countyBoundariesLayer.eachLayer(layer => {
+                                    if (polygonToStyle) return;
+                                    if (turf.booleanPointInPolygon(center, layer.toGeoJSON())) {
+                                        polygonToStyle = layer;
+                                    }
+                                });
+                                if (polygonToStyle) countyBoundariesLayer.removeLayer(polygonToStyle);
+                            } catch (e) {
+                                console.error("Could not find center of pre-loaded polygon, creating new one.", e);
+                                polygonToStyle = L.polygon(p.latlngs, {
+                                    isCustomPolygon: false
+                                });
+                            }
+                        }
+                        if (!polygonToStyle) {
+                            return;
+                        }
+                        if (p.color) {
+                            polygonToStyle.customColor = 'yes';
+                            polygonToStyle.levelPreset = p.level;
+                            polygonToStyle.baseColor = p.color;
+                            polygonToStyle.options.baseWeight = 2;
+                            polygonToStyle.setStyle({
+                                fillOpacity: activeOpacity,
+                                fillColor: polygonToStyle.baseColor,
+                                color: polygonToStyle.baseColor,
+                                weight: polygonToStyle.options.baseWeight
+                            });
+                            warningPolygonsLayer.addLayer(polygonToStyle);
+                            if (polygonToStyle.levelPreset === 'emergency') {
+                                createEmergencyDash(polygonToStyle);
+                            }
+                        } else {
+                            polygonToStyle.customColor = 'no';
+                            polygonToStyle.setStyle({
+                                color: 'black',
+                                fillOpacity: 0,
+                                weight: 2,
+                                pane: 'counties'
+                            });
+                            countyBoundariesLayer.addLayer(polygonToStyle);
+                        }
                     });
                 }
                 if (sharedData.markers && Array.isArray(sharedData.markers)) {
-                     sharedData.markers.forEach(m => {
-                        const marker = L.circleMarker(m.latlng, { isCustomMarker: true }).addTo(warningMarkersLayer);
-                        marker.customColor = 'yes';
-                        marker.levelPreset = m.level;
-                        marker.baseColor = m.color;
-                        marker.setStyle({ fillOpacity: activeOpacity + 0.2, fillColor: marker.baseColor, color: marker.baseColor, weight: 2, radius: 6 });
+                    sharedData.markers.forEach(m => {
+                        const marker = L.circleMarker(m.latlng, {
+                            isCustomMarker: true
+                        });
+                        if (m.color) {
+                            marker.customColor = 'yes';
+                            marker.levelPreset = m.level;
+                            marker.baseColor = m.color;
+                            marker.setStyle({
+                                fillOpacity: activeOpacity + 0.2,
+                                fillColor: marker.baseColor,
+                                color: marker.baseColor,
+                                weight: 2,
+                                radius: 6
+                            });
+                            warningMarkersLayer.addLayer(marker);
+                        } else {
+                            marker.customColor = 'no';
+                            marker.setStyle({
+                                radius: 6,
+                                color: 'black',
+                                weight: 2,
+                                fillColor: 'grey',
+                                fillOpacity: 0.5,
+                                pane: 'counties'
+                            });
+                            customMarkersLayer.addLayer(marker);
+                        }
                     });
                 }
                 if (sharedData.settings) {
@@ -843,10 +917,11 @@
                     const isCurrentlyLight = currentThemeLayer === lightThemeLayer;
                     if (wantsLightTheme !== isCurrentlyLight) toggleMapTheme();
                     themeToggleCheckbox.checked = wantsLightTheme;
-
                     const radarToggleCheckbox = document.getElementById('radar-toggle-checkbox');
                     const wantsRadar = sharedData.settings.radar;
-                    if (wantsRadar !== map.hasLayer(radarLayer)) toggleRadarLayer({ checked: wantsRadar });
+                    if (wantsRadar !== map.hasLayer(radarLayer)) toggleRadarLayer({
+                        checked: wantsRadar
+                    });
                     radarToggleCheckbox.checked = wantsRadar;
                 }
             } catch (error) {
@@ -856,5 +931,4 @@
         }
     </script>
 </body>
-
 </html>
