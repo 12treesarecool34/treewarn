@@ -10,6 +10,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.2/leaflet.draw.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/5.1.6/turf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
     <link href="https://unpkg.com/maplibre-gl@4.1.2/dist/maplibre-gl.css" rel="stylesheet" />
     <script src="https://unpkg.com/maplibre-gl@4.1.2/dist/maplibre-gl.js"></script>
     <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.21/leaflet-maplibre-gl.js"></script>
@@ -828,10 +829,8 @@
                 };
             }
             const jsonString = JSON.stringify(dataToShare);
-            const encodedData = btoa(encodeURIComponent(jsonString).replace(/%([0-9A-F]{2})/g,
-                function toSolidBytes(match, p1) {
-                    return String.fromCharCode('0x' + p1);
-                }));
+            const compressed = pako.deflate(jsonString);
+            const encodedData = btoa(String.fromCharCode.apply(null, compressed));
             document.getElementById('share-url-input').value = `?data=${encodedData}`;
         }
 
@@ -839,9 +838,8 @@
             const data = new URLSearchParams(window.location.search).get('data');
             if (!data) return;
             try {
-                const decodedData = decodeURIComponent(atob(data).split('').map(function(c) {
-                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-                }).join(''));
+                const compressed = Uint8Array.from(atob(data), c => c.charCodeAt(0));
+                const decodedData = pako.inflate(compressed, { to: 'string' });
                 const sharedData = JSON.parse(decodedData);
                 enterSharedMode();
 
