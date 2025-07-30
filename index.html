@@ -830,15 +830,39 @@
             }
             const jsonString = JSON.stringify(dataToShare);
             const compressed = pako.deflate(jsonString);
-            const encodedData = btoa(String.fromCharCode.apply(null, compressed));
+            
+            // Convert Uint8Array to a binary string
+            let binaryString = '';
+            compressed.forEach(byte => {
+                binaryString += String.fromCharCode(byte);
+            });
+
+            // Base64 encode and make URL-safe
+            const encodedData = btoa(binaryString)
+                .replace(/\+/g, '-') // Replace + with -
+                .replace(/\//g, '_') // Replace / with _
+                .replace(/=+$/, ''); // Remove padding
+
             document.getElementById('share-url-input').value = `?data=${encodedData}`;
         }
 
         function loadDataFromUrl() {
-            const data = new URLSearchParams(window.location.search).get('data');
+            let data = new URLSearchParams(window.location.search).get('data');
             if (!data) return;
+
             try {
-                const compressed = Uint8Array.from(atob(data), c => c.charCodeAt(0));
+                // Add padding back and revert URL-safe replacements
+                data = data.replace(/-/g, '+').replace(/_/g, '/');
+                while (data.length % 4) {
+                    data += '=';
+                }
+
+                const binaryString = atob(data);
+                const compressed = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    compressed[i] = binaryString.charCodeAt(i);
+                }
+
                 const decodedData = pako.inflate(compressed, { to: 'string' });
                 const sharedData = JSON.parse(decodedData);
                 enterSharedMode();
