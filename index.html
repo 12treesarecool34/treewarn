@@ -384,17 +384,20 @@
 
         document.getElementById('context-menu-settings').addEventListener('click', () => {
             document.getElementById('settings-modal').style.display = 'flex';
+            document.getElementById('text-overlay').style.display = 'none';
             document.getElementById('context-menu').style.display = 'none';
         });
 
         document.getElementById('context-menu-share').addEventListener('click', () => {
             document.getElementById('share-modal').style.display = 'flex';
+            document.getElementById('text-overlay').style.display = 'none';
             document.getElementById('context-menu').style.display = 'none';
             updateShareUrl();
         });
 
         document.getElementById('context-menu-about').addEventListener('click', () => {
             document.getElementById('about-modal').style.display = 'flex';
+            document.getElementById('text-overlay').style.display = 'none';
             document.getElementById('context-menu').style.display = 'none';
         });
 
@@ -653,9 +656,18 @@
             }
         });
 
-        document.getElementById('close-settings-button').addEventListener('click', () => document.getElementById('settings-modal').style.display = 'none');
-        document.getElementById('close-about-button').addEventListener('click', () => document.getElementById('about-modal').style.display = 'none');
-        document.getElementById('close-share-button').addEventListener('click', () => document.getElementById('share-modal').style.display = 'none');
+        document.getElementById('close-settings-button').addEventListener('click', () => {
+            document.getElementById('settings-modal').style.display = 'none';
+            document.getElementById('text-overlay').style.display = 'block';
+        });
+        document.getElementById('close-about-button').addEventListener('click', () => {
+            document.getElementById('about-modal').style.display = 'none';
+            document.getElementById('text-overlay').style.display = 'block';
+        });
+        document.getElementById('close-share-button').addEventListener('click', () => {
+            document.getElementById('share-modal').style.display = 'none';
+            document.getElementById('text-overlay').style.display = 'block';
+        });
 
         const DEFAULT_OPACITY = 0.3;
 
@@ -758,19 +770,35 @@
         function updateShareUrl() {
             const shareSettings = document.getElementById('share-settings-checkbox').checked;
             const dataToShare = {
-                polygons: [],
-                markers: [],
-                text: {}
+                p: [], // polygons
+                m: [], // markers
+                t: {   // text
+                    h2: document.querySelector('.text-overlay h2').innerHTML,
+                    p: document.querySelector('.text-overlay p').innerHTML
+                }
             };
+
             const processedLayerIds = new Set();
             [...warningPolygonsLayer.getLayers(), ...countyBoundariesLayer.getLayers()].forEach(layer => {
                 if (layer instanceof L.Polygon && !processedLayerIds.has(layer._leaflet_id)) {
                     if (layer.isCustomPolygon || layer.customColor === 'yes') {
-                        dataToShare.polygons.push({
-                            latlngs: layer.getLatLngs(),
-                            color: layer.baseColor || null,
-                            level: layer.levelPreset || null,
-                            isCustom: !!layer.isCustomPolygon
+                        const latlngs = layer.getLatLngs();
+                        let finalLatLngs;
+                        
+                        const firstEl = latlngs[0];
+                        if (firstEl && Array.isArray(firstEl)) { // Multi-polygon
+                            finalLatLngs = latlngs.map(ring => ring.map(p => [Number(p.lat.toFixed(5)), Number(p.lng.toFixed(5))]));
+                        } else if (firstEl) { // Simple polygon
+                            finalLatLngs = [latlngs.map(p => [Number(p.lat.toFixed(5)), Number(p.lng.toFixed(5))])];
+                        } else {
+                            finalLatLngs = [];
+                        }
+
+                        dataToShare.p.push({
+                            ll: finalLatLngs,
+                            c: layer.baseColor || null,
+                            l: layer.levelPreset || null,
+                            i: !!layer.isCustomPolygon
                         });
                         processedLayerIds.add(layer._leaflet_id);
                     }
@@ -779,23 +807,24 @@
             [...warningMarkersLayer.getLayers(), ...customMarkersLayer.getLayers()].forEach(layer => {
                 if (layer instanceof L.CircleMarker && !processedLayerIds.has(layer._leaflet_id)) {
                     if (layer.isCustomMarker) {
-                        dataToShare.markers.push({
-                            latlng: layer.getLatLng(),
-                            color: layer.baseColor || null,
-                            level: layer.levelPreset || null,
+                         const markerLatLng = layer.getLatLng();
+                        dataToShare.m.push({
+                            ll: [Number(markerLatLng.lat.toFixed(5)), Number(markerLatLng.lng.toFixed(5))],
+                            c: layer.baseColor || null,
+                            l: layer.levelPreset || null,
                         });
                         processedLayerIds.add(layer._leaflet_id);
                     }
                 }
             });
-            dataToShare.text.h2 = document.querySelector('.text-overlay h2').innerHTML;
-            dataToShare.text.p = document.querySelector('.text-overlay p').innerHTML;
+
             if (shareSettings) {
-                dataToShare.settings = {
-                    mapStyle: (currentThemeLayer === lightThemeLayer) ? 'light' : 'dark',
-                    radar: map.hasLayer(radarLayer),
-                    zoom: map.getZoom(),
-                    center: map.getCenter()
+                const center = map.getCenter();
+                dataToShare.s = { // settings
+                    t: (currentThemeLayer === lightThemeLayer) ? 'l' : 'd',
+                    r: map.hasLayer(radarLayer),
+                    z: map.getZoom(),
+                    c: [Number(center.lat.toFixed(5)), Number(center.lng.toFixed(5))]
                 };
             }
             const jsonString = JSON.stringify(dataToShare);
@@ -815,23 +844,22 @@
                 }).join(''));
                 const sharedData = JSON.parse(decodedData);
                 enterSharedMode();
-                if (sharedData.text) {
-                    if (sharedData.text.h2) document.querySelector('.text-overlay h2').innerHTML = sharedData.text.h2;
-                    if (sharedData.text.p) document.querySelector('.text-overlay p').innerHTML = sharedData.text.p;
+
+                if (sharedData.t) {
+                    if (sharedData.t.h2) document.querySelector('.text-overlay h2').innerHTML = sharedData.t.h2;
+                    if (sharedData.t.p) document.querySelector('.text-overlay p').innerHTML = sharedData.t.p;
                 }
-                if (sharedData.polygons && Array.isArray(sharedData.polygons)) {
-                    sharedData.polygons.forEach(p => {
+                if (sharedData.p && Array.isArray(sharedData.p)) {
+                    sharedData.p.forEach(p => {
                         let polygonToStyle;
-                        if (p.isCustom) {
-                            polygonToStyle = L.polygon(p.latlngs, {
-                                isCustomPolygon: true
-                            });
+                        const latlngs = p.ll;
+
+                        if (p.i) { // isCustom
+                            polygonToStyle = L.polygon(latlngs, { isCustomPolygon: true });
                         } else {
                             try {
-                                const tempGeoJSON = {
-                                    type: 'Polygon',
-                                    coordinates: p.latlngs.map(ring => ring.map(latlng => [latlng.lng, latlng.lat]))
-                                };
+                                const turfCoords = latlngs.map(ring => ring.map(ll => [ll[1], ll[0]]));
+                                const tempGeoJSON = { type: 'Polygon', coordinates: turfCoords };
                                 const center = turf.centerOfMass(tempGeoJSON);
                                 countyBoundariesLayer.eachLayer(layer => {
                                     if (polygonToStyle) return;
@@ -842,18 +870,15 @@
                                 if (polygonToStyle) countyBoundariesLayer.removeLayer(polygonToStyle);
                             } catch (e) {
                                 console.error("Could not find center of pre-loaded polygon, creating new one.", e);
-                                polygonToStyle = L.polygon(p.latlngs, {
-                                    isCustomPolygon: false
-                                });
+                                polygonToStyle = L.polygon(latlngs, { isCustomPolygon: false });
                             }
                         }
-                        if (!polygonToStyle) {
-                            return;
-                        }
-                        if (p.color) {
+                        if (!polygonToStyle) return;
+                        
+                        if (p.c) { // color
                             polygonToStyle.customColor = 'yes';
-                            polygonToStyle.levelPreset = p.level;
-                            polygonToStyle.baseColor = p.color;
+                            polygonToStyle.levelPreset = p.l;
+                            polygonToStyle.baseColor = p.c;
                             polygonToStyle.options.baseWeight = 2;
                             polygonToStyle.setStyle({
                                 fillOpacity: activeOpacity,
@@ -867,25 +892,18 @@
                             }
                         } else {
                             polygonToStyle.customColor = 'no';
-                            polygonToStyle.setStyle({
-                                color: 'black',
-                                fillOpacity: 0,
-                                weight: 2,
-                                pane: 'counties'
-                            });
+                            polygonToStyle.setStyle({ color: 'black', fillOpacity: 0, weight: 2, pane: 'counties' });
                             countyBoundariesLayer.addLayer(polygonToStyle);
                         }
                     });
                 }
-                if (sharedData.markers && Array.isArray(sharedData.markers)) {
-                    sharedData.markers.forEach(m => {
-                        const marker = L.circleMarker(m.latlng, {
-                            isCustomMarker: true
-                        });
-                        if (m.color) {
+                if (sharedData.m && Array.isArray(sharedData.m)) {
+                    sharedData.m.forEach(m => {
+                        const marker = L.circleMarker(m.ll, { isCustomMarker: true });
+                        if (m.c) { // color
                             marker.customColor = 'yes';
-                            marker.levelPreset = m.level;
-                            marker.baseColor = m.color;
+                            marker.levelPreset = m.l;
+                            marker.baseColor = m.c;
                             marker.setStyle({
                                 fillOpacity: activeOpacity + 0.2,
                                 fillColor: marker.baseColor,
@@ -896,32 +914,24 @@
                             warningMarkersLayer.addLayer(marker);
                         } else {
                             marker.customColor = 'no';
-                            marker.setStyle({
-                                radius: 6,
-                                color: 'black',
-                                weight: 2,
-                                fillColor: 'grey',
-                                fillOpacity: 0.5,
-                                pane: 'counties'
-                            });
+                            marker.setStyle({ radius: 6, color: 'black', weight: 2, fillColor: 'grey', fillOpacity: 0.5, pane: 'counties' });
                             customMarkersLayer.addLayer(marker);
                         }
                     });
                 }
-                if (sharedData.settings) {
-                    if (sharedData.settings.center && sharedData.settings.zoom) {
-                        map.setView(sharedData.settings.center, sharedData.settings.zoom);
+                if (sharedData.s) { // settings
+                    if (sharedData.s.c && sharedData.s.z) {
+                        map.setView(sharedData.s.c, sharedData.s.z);
                     }
                     const themeToggleCheckbox = document.getElementById('theme-toggle-checkbox');
-                    const wantsLightTheme = sharedData.settings.mapStyle === 'light';
+                    const wantsLightTheme = sharedData.s.t === 'l';
                     const isCurrentlyLight = currentThemeLayer === lightThemeLayer;
                     if (wantsLightTheme !== isCurrentlyLight) toggleMapTheme();
                     themeToggleCheckbox.checked = wantsLightTheme;
+                    
                     const radarToggleCheckbox = document.getElementById('radar-toggle-checkbox');
-                    const wantsRadar = sharedData.settings.radar;
-                    if (wantsRadar !== map.hasLayer(radarLayer)) toggleRadarLayer({
-                        checked: wantsRadar
-                    });
+                    const wantsRadar = sharedData.s.r;
+                    if (wantsRadar !== map.hasLayer(radarLayer)) toggleRadarLayer({ checked: wantsRadar });
                     radarToggleCheckbox.checked = wantsRadar;
                 }
             } catch (error) {
