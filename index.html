@@ -771,9 +771,9 @@
         function updateShareUrl() {
             const shareSettings = document.getElementById('share-settings-checkbox').checked;
             const dataToShare = {
-                p: [], // polygons
-                m: [], // markers
-                t: {   // text
+                p: [],
+                m: [],
+                t: {
                     h2: document.querySelector('.text-overlay h2').innerHTML,
                     p: document.querySelector('.text-overlay p').innerHTML
                 }
@@ -785,11 +785,11 @@
                     if (layer.isCustomPolygon || layer.customColor === 'yes') {
                         const latlngs = layer.getLatLngs();
                         let finalLatLngs;
-                        
+
                         const firstEl = latlngs[0];
-                        if (firstEl && Array.isArray(firstEl)) { // Multi-polygon
+                        if (firstEl && Array.isArray(firstEl)) {
                             finalLatLngs = latlngs.map(ring => ring.map(p => [Number(p.lat.toFixed(5)), Number(p.lng.toFixed(5))]));
-                        } else if (firstEl) { // Simple polygon
+                        } else if (firstEl) {
                             finalLatLngs = [latlngs.map(p => [Number(p.lat.toFixed(5)), Number(p.lng.toFixed(5))])];
                         } else {
                             finalLatLngs = [];
@@ -808,7 +808,7 @@
             [...warningMarkersLayer.getLayers(), ...customMarkersLayer.getLayers()].forEach(layer => {
                 if (layer instanceof L.CircleMarker && !processedLayerIds.has(layer._leaflet_id)) {
                     if (layer.isCustomMarker) {
-                         const markerLatLng = layer.getLatLng();
+                        const markerLatLng = layer.getLatLng();
                         dataToShare.m.push({
                             ll: [Number(markerLatLng.lat.toFixed(5)), Number(markerLatLng.lng.toFixed(5))],
                             c: layer.baseColor || null,
@@ -821,7 +821,7 @@
 
             if (shareSettings) {
                 const center = map.getCenter();
-                dataToShare.s = { // settings
+                dataToShare.s = {
                     t: (currentThemeLayer === lightThemeLayer) ? 'l' : 'd',
                     r: map.hasLayer(radarLayer),
                     z: map.getZoom(),
@@ -830,18 +830,16 @@
             }
             const jsonString = JSON.stringify(dataToShare);
             const compressed = pako.deflate(jsonString);
-            
-            // Convert Uint8Array to a binary string
+
             let binaryString = '';
             compressed.forEach(byte => {
                 binaryString += String.fromCharCode(byte);
             });
 
-            // Base64 encode and make URL-safe
             const encodedData = btoa(binaryString)
-                .replace(/\+/g, '-') // Replace + with -
-                .replace(/\//g, '_') // Replace / with _
-                .replace(/=+$/, ''); // Remove padding
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')
+                .replace(/=+$/, '');
 
             document.getElementById('share-url-input').value = `?data=${encodedData}`;
         }
@@ -851,7 +849,6 @@
             if (!data) return;
 
             try {
-                // Add padding back and revert URL-safe replacements
                 data = data.replace(/-/g, '+').replace(/_/g, '/');
                 while (data.length % 4) {
                     data += '=';
@@ -863,7 +860,9 @@
                     compressed[i] = binaryString.charCodeAt(i);
                 }
 
-                const decodedData = pako.inflate(compressed, { to: 'string' });
+                const decodedData = pako.inflate(compressed, {
+                    to: 'string'
+                });
                 const sharedData = JSON.parse(decodedData);
                 enterSharedMode();
 
@@ -876,12 +875,17 @@
                         let polygonToStyle;
                         const latlngs = p.ll;
 
-                        if (p.i) { // isCustom
-                            polygonToStyle = L.polygon(latlngs, { isCustomPolygon: true });
+                        if (p.i) {
+                            polygonToStyle = L.polygon(latlngs, {
+                                isCustomPolygon: true
+                            });
                         } else {
                             try {
                                 const turfCoords = latlngs.map(ring => ring.map(ll => [ll[1], ll[0]]));
-                                const tempGeoJSON = { type: 'Polygon', coordinates: turfCoords };
+                                const tempGeoJSON = {
+                                    type: 'Polygon',
+                                    coordinates: turfCoords
+                                };
                                 const center = turf.centerOfMass(tempGeoJSON);
                                 countyBoundariesLayer.eachLayer(layer => {
                                     if (polygonToStyle) return;
@@ -892,12 +896,14 @@
                                 if (polygonToStyle) countyBoundariesLayer.removeLayer(polygonToStyle);
                             } catch (e) {
                                 console.error("Could not find center of pre-loaded polygon, creating new one.", e);
-                                polygonToStyle = L.polygon(latlngs, { isCustomPolygon: false });
+                                polygonToStyle = L.polygon(latlngs, {
+                                    isCustomPolygon: false
+                                });
                             }
                         }
                         if (!polygonToStyle) return;
-                        
-                        if (p.c) { // color
+
+                        if (p.c) {
                             polygonToStyle.customColor = 'yes';
                             polygonToStyle.levelPreset = p.l;
                             polygonToStyle.baseColor = p.c;
@@ -914,15 +920,22 @@
                             }
                         } else {
                             polygonToStyle.customColor = 'no';
-                            polygonToStyle.setStyle({ color: 'black', fillOpacity: 0, weight: 2, pane: 'counties' });
+                            polygonToStyle.setStyle({
+                                color: 'black',
+                                fillOpacity: 0,
+                                weight: 2,
+                                pane: 'counties'
+                            });
                             countyBoundariesLayer.addLayer(polygonToStyle);
                         }
                     });
                 }
                 if (sharedData.m && Array.isArray(sharedData.m)) {
                     sharedData.m.forEach(m => {
-                        const marker = L.circleMarker(m.ll, { isCustomMarker: true });
-                        if (m.c) { // color
+                        const marker = L.circleMarker(m.ll, {
+                            isCustomMarker: true
+                        });
+                        if (m.c) {
                             marker.customColor = 'yes';
                             marker.levelPreset = m.l;
                             marker.baseColor = m.c;
@@ -936,12 +949,19 @@
                             warningMarkersLayer.addLayer(marker);
                         } else {
                             marker.customColor = 'no';
-                            marker.setStyle({ radius: 6, color: 'black', weight: 2, fillColor: 'grey', fillOpacity: 0.5, pane: 'counties' });
+                            marker.setStyle({
+                                radius: 6,
+                                color: 'black',
+                                weight: 2,
+                                fillColor: 'grey',
+                                fillOpacity: 0.5,
+                                pane: 'counties'
+                            });
                             customMarkersLayer.addLayer(marker);
                         }
                     });
                 }
-                if (sharedData.s) { // settings
+                if (sharedData.s) {
                     if (sharedData.s.c && sharedData.s.z) {
                         map.setView(sharedData.s.c, sharedData.s.z);
                     }
@@ -950,10 +970,12 @@
                     const isCurrentlyLight = currentThemeLayer === lightThemeLayer;
                     if (wantsLightTheme !== isCurrentlyLight) toggleMapTheme();
                     themeToggleCheckbox.checked = wantsLightTheme;
-                    
+
                     const radarToggleCheckbox = document.getElementById('radar-toggle-checkbox');
                     const wantsRadar = sharedData.s.r;
-                    if (wantsRadar !== map.hasLayer(radarLayer)) toggleRadarLayer({ checked: wantsRadar });
+                    if (wantsRadar !== map.hasLayer(radarLayer)) toggleRadarLayer({
+                        checked: wantsRadar
+                    });
                     radarToggleCheckbox.checked = wantsRadar;
                 }
             } catch (error) {
