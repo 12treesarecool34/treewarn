@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>TreeWarn (v2 Beta)</title>
+    <title>TreeRadar</title>
     <link rel="icon" href="https://raw.githubusercontent.com/microsoft/fluentui-emoji/refs/heads/main/assets/Deciduous%20tree/3D/deciduous_tree_3d.png" />
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -29,8 +29,10 @@
         <h2>Settings</h2>
         <div class="settings-group">
             <h3>Map Style</h3>
-            <label><input type="radio" name="map-style" value="light" checked> Light</label>
-            <label><input type="radio" name="map-style" value="dark"> Dark</label>
+            <select id="map-style-select">
+                <option value="dark">Dark</option>
+                <option value="light">Light</option>
+            </select>
         </div>
         <div class="settings-group">
             <h3>SPC Outlooks</h3>
@@ -58,13 +60,12 @@
     <script>
         const map = new maplibregl.Map({
             container: 'map',
-            style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+            style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
             center: [-98.5795, 39.8283],
             zoom: 4,
-            attributionControl: false // Disable default attribution
+            attributionControl: false
         });
 
-        // Add compact attribution control
         map.addControl(new maplibregl.AttributionControl({
             compact: true
         }));
@@ -81,10 +82,8 @@
             }
         };
 
-        // MODIFIED: Also generate border layer IDs for easier management
         const baseSpcLayerIds = Object.values(layerIds.spc).flatMap(day => Object.values(day));
         const allSpcLayerIds = baseSpcLayerIds.flatMap(id => [id, `${id}-border`]);
-
 
         const daySelect = document.getElementById('spc-day-select');
         const typeSelect = document.getElementById('spc-type-select');
@@ -107,7 +106,6 @@
                 }
             }
 
-            // --- SOURCES ---
             const spcSources = [
                 { id: layerIds.spc.day1.cat, url: 'https://www.spc.noaa.gov/products/outlook/day1otlk_cat.nolyr.geojson' }, { id: layerIds.spc.day1.torn, url: 'https://www.spc.noaa.gov/products/outlook/day1otlk_torn.nolyr.geojson' }, { id: layerIds.spc.day1.hail, url: 'https://www.spc.noaa.gov/products/outlook/day1otlk_hail.nolyr.geojson' }, { id: layerIds.spc.day1.wind, url: 'https://www.spc.noaa.gov/products/outlook/day1otlk_wind.nolyr.geojson' },
                 { id: layerIds.spc.day2.cat, url: 'https://www.spc.noaa.gov/products/outlook/day2otlk_cat.nolyr.geojson' }, { id: layerIds.spc.day2.torn, url: 'https://www.spc.noaa.gov/products/outlook/day2otlk_torn.nolyr.geojson' }, { id: layerIds.spc.day2.hail, url: 'https://www.spc.noaa.gov/products/outlook/day2otlk_hail.nolyr.geojson' }, { id: layerIds.spc.day2.wind, url: 'https://www.spc.noaa.gov/products/outlook/day2otlk_wind.nolyr.geojson' },
@@ -118,14 +116,13 @@
             map.addSource('alerts', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
             map.addSource('radar-sites', { type: 'geojson', data: 'https://api.weather.gov/radar/stations' });
             
-            fetch('https://api.weather.gov/alerts/active?status=actual&message_type=alert')
+            fetch('https://api.weather.gov/alerts/active?status=actual&message_type=alert,update')
                 .then(response => response.json()).then(data => {
                     if (map.getSource('alerts')) {
                         map.getSource('alerts').setData(data);
                     }
                 }).catch(e => console.error("Fetch ERR:", e));
             
-            // --- LAYERS ---
             map.addLayer({
                 id: layerIds.radarSites, type: 'circle', source: 'radar-sites',
                 filter: ['in', ['get', 'stationType'], ['literal', ['TDWR', 'WSR-88D']]],
@@ -140,13 +137,13 @@
 
             const alertFilter = [
                 'in', ['get', 'event'],
-                ['literal', [ 'Tornado Warning', 'Severe Thunderstorm Warning', 'Severe Weather Statement', 'Special Marine Warning', 'Flash Flood Warning', 'Flash Flood Advisory', 'Flood Warning', 'Flood Advisory', 'Special Weather Statement' ]]
+                ['literal', [ 'Tornado Warning', 'Severe Thunderstorm Warning', 'Severe Weather Statement', 'Special Marine Warning', 'Marine Weather Statement', 'Flash Flood Warning', 'Flash Flood Advisory', 'Flood Warning', 'Flood Advisory', 'Special Weather Statement' ]]
             ];
 
             const alertColor = [
                 'match', ['get', 'event'],
                 'Tornado Warning', '#FF0000', 'Severe Thunderstorm Warning', '#FFA500', 'Severe Weather Statement', '#ADD8E6',
-                'Special Marine Warning', '#FFFF00', 'Flash Flood Warning', '#008080', 'Flash Flood Advisory', '#008080',
+                'Special Marine Warning', '#FFFF00', 'Marine Weather Statement', '#FFFF00', 'Flash Flood Warning', '#008080', 'Flash Flood Advisory', '#008080',
                 'Flood Warning', '#008000', 'Flood Advisory', '#008000', 'Special Weather Statement', '#ADD8E6', '#808080'
             ];
 
@@ -163,36 +160,39 @@
             }, layerIds.alerts);
 
             map.addLayer({ 
-                id: layerIds.radar, type: 'raster', source: 'weather-radar', 
-                paint: { 'raster-opacity': 0.6 },
+                id: layerIds.radar, type: 'raster', source: 'weather-radar',
                 layout: { 'visibility': document.getElementById('radar-toggle').checked ? 'visible' : 'none' }
             }, layerIds.alertsBorder);
 
-            // MODIFIED: Add fill and border layers for SPC outlooks
+            // MODIFIED: This section is updated to read the current state of the dropdowns
+            // and apply the correct visibility when the layers are first added.
+            const selectedDay = daySelect.value;
+            const selectedType = typeSelect.value;
+            let activeSpcLayerId = null;
+
+            if (selectedDay !== 'none' && outlookTypes['day' + selectedDay]) {
+                activeSpcLayerId = layerIds.spc['day' + selectedDay][selectedType];
+            }
+
             spcSources.forEach(source => {
-                // SPC Fill Layer
+                const isVisible = source.id === activeSpcLayerId;
+                const visibility = isVisible ? 'visible' : 'none';
+
                 map.addLayer({
                     id: source.id,
                     type: 'fill',
                     source: source.id,
-                    paint: {
-                        'fill-color': ['get', 'fill'],
-                        'fill-opacity': 0.3 // Changed from 0.6
-                    },
-                    layout: { 'visibility': 'none' }
-                }, layerIds.radar); // Draw under the radar
+                    paint: { 'fill-color': ['get', 'fill'], 'fill-opacity': 0.3 },
+                    layout: { 'visibility': visibility }
+                }, layerIds.radar);
 
-                // SPC Border Layer
                 map.addLayer({
-                    id: `${source.id}-border`, // Unique ID for the border layer
+                    id: `${source.id}-border`,
                     type: 'line',
                     source: source.id,
-                    paint: {
-                        'line-color': ['get', 'fill'], // Border color matches fill color
-                        'line-width': 2 // Border weight of 2
-                    },
-                    layout: { 'visibility': 'none' }
-                }, layerIds.radar); // Draw under the radar
+                    paint: { 'line-color': ['get', 'fill'], 'line-width': 2 },
+                    layout: { 'visibility': visibility }
+                }, layerIds.radar);
             });
         }
 
@@ -212,7 +212,6 @@
 
         function updateSpcLayerVisibility() {
             if (!map.isStyleLoaded()) return;
-            // Hide all SPC layers (both fill and border)
             allSpcLayerIds.forEach(id => {
                  if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'none');
             });
@@ -223,15 +222,11 @@
             const type = typeSelect.value;
             const layerToShow = layerIds.spc['day' + day][type];
             
-            // MODIFIED: Show both the fill and the border layer
             if (layerToShow) {
-                const fillLayer = map.getLayer(layerToShow);
-                const borderLayer = map.getLayer(`${layerToShow}-border`);
-
-                if (fillLayer) {
+                if (map.getLayer(layerToShow)) {
                     map.setLayoutProperty(layerToShow, 'visibility', 'visible');
                 }
-                if (borderLayer) {
+                if (map.getLayer(`${layerToShow}-border`)) {
                     map.setLayoutProperty(`${layerToShow}-border`, 'visibility', 'visible');
                 }
             }
@@ -258,20 +253,19 @@
             });
             document.getElementById('radar-sites-toggle').addEventListener('change', (e) => { if (map.getLayer(layerIds.radarSites)) map.setLayoutProperty(layerIds.radarSites, 'visibility', e.target.checked ? 'visible' : 'none'); });
 
-            document.querySelectorAll('input[name="map-style"]').forEach((input) => {
-                input.addEventListener('change', (e) => {
-                    const styleUrl = e.target.value === 'dark' ? 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json' : 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
-                    map.setStyle(styleUrl);
-                });
+            document.getElementById('map-style-select').addEventListener('change', (e) => {
+                const styleUrl = e.target.value === 'dark' 
+                    ? 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json' 
+                    : 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
+                map.setStyle(styleUrl);
             });
         });
 
         map.on('style.load', () => {
             setupMapData();
-            handleDayChange();
+            handleDayChange(); // This ensures visibility is correctly reapplied
         });
 
-        // --- INTERACTIVITY FOR RADAR SITES ---
         map.on('contextmenu', layerIds.radarSites, (e) => {
             e.preventDefault(); 
             if (!e.features || e.features.length === 0) return;
