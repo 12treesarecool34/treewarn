@@ -146,6 +146,12 @@
                 <div style="display: flex; flex-direction: row; align-items: center;">
                     <input id="radar-toggle-checkbox" onchange="toggleRadarLayer(this);" type="checkbox" checked> Radar
                 </div>
+                <div style="display: flex; flex-direction: row; align-items: center;">
+                    <input id="outlook-toggle-checkbox" onchange="toggleOutlookLayer(this);" type="checkbox"> SPC Day 1 Outlook
+                </div>
+                <div style="display: flex; flex-direction: row; align-items: center;">
+                    <input id="nws-warnings-toggle-checkbox" onchange="toggleNwsWarningsLayer(this);" type="checkbox"> NWS Warnings
+                </div>
                 <h3>Styles</h3>
                 <div style="display: flex; flex-direction: column; align-items: left;">
                     <div style="display: flex; flex-direction: row; align-items: center;">
@@ -250,8 +256,12 @@
         map.getPane('dashedLines').style.zIndex = 401;
         map.createPane('warnings');
         map.getPane('warnings').style.zIndex = 398;
+		map.createPane('outlook');
+        map.getPane('outlook').style.zIndex = 397;
         map.createPane('counties');
         map.getPane('counties').style.zIndex = 301;
+        map.createPane('nwsWarnPane');
+        map.getPane('nwsWarnPane').style.zIndex = 399;
 
         const emergencyDashesGroup = new L.FeatureGroup([], {
             pane: 'dashedLines'
@@ -266,6 +276,8 @@
             pane: 'warnings'
         }).addTo(map);
         let countyBoundariesLayer = L.geoJSON().addTo(map);
+		let spcOutlookLayer = null;
+        let nwsAlertsLayer = null;
 
         L.drawLocal.draw.handlers.polygon.tooltip.start = null;
         L.drawLocal.draw.handlers.polygon.tooltip.cont = null;
@@ -314,6 +326,94 @@
                 map.addLayer(radarLayer);
             } else {
                 map.removeLayer(radarLayer);
+            }
+        }
+		
+		function toggleOutlookLayer(checkbox) {
+			if (checkbox.checked) {
+				if (spcOutlookLayer && map.hasLayer(spcOutlookLayer)) return;
+				
+				if (!spcOutlookLayer) {
+					fetch('https://www.spc.noaa.gov/products/outlook/day1otlk_cat.nolyr.geojson')
+						.then(response => response.json())
+						.then(data => {
+							spcOutlookLayer = L.geoJSON(data, {
+								style: function(feature) {
+									return {
+										color: feature.properties.stroke,
+										weight: 2,
+										fillColor: feature.properties.fill,
+										fillOpacity: 0.5
+									};
+								},
+								onEachFeature: function(feature, layer) {
+									if (feature.properties && feature.properties.LABEL) {
+										layer.bindPopup(`<b>${feature.properties.LABEL}</b><br>${feature.properties.LABEL2 || ''}`);
+									}
+								},
+								pane: 'outlook'
+							}).addTo(map);
+						})
+						.catch(error => console.error('Error loading SPC Outlook GeoJSON:', error));
+				} else {
+					map.addLayer(spcOutlookLayer);
+				}
+			} else {
+				if (spcOutlookLayer && map.hasLayer(spcOutlookLayer)) {
+					map.removeLayer(spcOutlookLayer);
+				}
+			}
+		}
+
+        function getNwsWarningColor(eventName) {
+            const lowerEvent = eventName.toLowerCase();
+            if (lowerEvent.includes('tornado warning')) return '#FF0000';
+            if (lowerEvent.includes('tornado watch')) return '#FFFF00';
+            if (lowerEvent.includes('severe thunderstorm warning')) return '#FFA500';
+            if (lowerEvent.includes('severe thunderstorm watch')) return '#DB7093';
+            if (lowerEvent.includes('flash flood')) return '#00FFFF';
+            if (lowerEvent.includes('flood warning')) return '#00FF00';
+            if (lowerEvent.includes('flood watch')) return '#228B22';
+            if (lowerEvent.includes('special marine')) return '#FFA500';
+            if (lowerEvent.includes('special weather statement')) return '#AFEEEE';
+            return '#FFFFFF'; 
+        }
+
+        function toggleNwsWarningsLayer(checkbox) {
+            if (checkbox.checked) {
+                if (nwsAlertsLayer) {
+                    map.addLayer(nwsAlertsLayer);
+                } else {
+                    fetch('https://api.weather.gov/alerts/active')
+                        .then(response => response.json())
+                        .then(data => {
+                            nwsAlertsLayer = L.geoJSON(data, {
+                                style: function(feature) {
+                                    const color = getNwsWarningColor(feature.properties.event);
+                                    return {
+                                        color: color,
+                                        weight: 2,
+                                        fillColor: color,
+                                        fillOpacity: 0.4
+                                    };
+                                },
+                                onEachFeature: function(feature, layer) {
+                                    if (feature.properties) {
+                                        let popupContent = `<b>${feature.properties.event}</b><br>`;
+                                        if (feature.properties.headline) popupContent += `${feature.properties.headline}<br>`;
+                                        if (feature.properties.description) popupContent += `<br><i>${feature.properties.description}</i>`;
+                                        layer.bindPopup(popupContent);
+                                    }
+                                },
+                                pane: 'nwsWarnPane'
+                            }).addTo(map);
+                        })
+                        .catch(error => console.error('Error loading NWS alerts:', error));
+                }
+            } else {
+                if (nwsAlertsLayer) {
+                    map.removeLayer(nwsAlertsLayer);
+                }
             }
         }
 
@@ -785,7 +885,7 @@
                     if (layer.isCustomPolygon || layer.customColor === 'yes') {
                         const latlngs = layer.getLatLngs();
                         let finalLatLngs;
-
+                        
                         const firstEl = latlngs[0];
                         if (firstEl && Array.isArray(firstEl)) {
                             finalLatLngs = latlngs.map(ring => ring.map(p => [Number(p.lat.toFixed(5)), Number(p.lng.toFixed(5))]));
@@ -808,7 +908,7 @@
             [...warningMarkersLayer.getLayers(), ...customMarkersLayer.getLayers()].forEach(layer => {
                 if (layer instanceof L.CircleMarker && !processedLayerIds.has(layer._leaflet_id)) {
                     if (layer.isCustomMarker) {
-                        const markerLatLng = layer.getLatLng();
+                         const markerLatLng = layer.getLatLng();
                         dataToShare.m.push({
                             ll: [Number(markerLatLng.lat.toFixed(5)), Number(markerLatLng.lng.toFixed(5))],
                             c: layer.baseColor || null,
@@ -823,46 +923,31 @@
                 const center = map.getCenter();
                 dataToShare.s = {
                     t: (currentThemeLayer === lightThemeLayer) ? 'l' : 'd',
-                    r: map.hasLayer(radarLayer),
+                    r: document.getElementById('radar-toggle-checkbox').checked,
+                    o: document.getElementById('outlook-toggle-checkbox').checked,
+                    w: document.getElementById('nws-warnings-toggle-checkbox').checked,
                     z: map.getZoom(),
                     c: [Number(center.lat.toFixed(5)), Number(center.lng.toFixed(5))]
                 };
             }
             const jsonString = JSON.stringify(dataToShare);
             const compressed = pako.deflate(jsonString);
-
-            let binaryString = '';
-            compressed.forEach(byte => {
-                binaryString += String.fromCharCode(byte);
-            });
-
-            const encodedData = btoa(binaryString)
-                .replace(/\+/g, '-')
-                .replace(/\//g, '_')
-                .replace(/=+$/, '');
-
-            document.getElementById('share-url-input').value = `?data=${encodedData}`;
+            const encodedData = btoa(String.fromCharCode.apply(null, compressed));
+            const urlSafeEncodedData = encodedData.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+            
+            document.getElementById('share-url-input').value = `?data=${urlSafeEncodedData}`;
         }
 
         function loadDataFromUrl() {
-            let data = new URLSearchParams(window.location.search).get('data');
+            const data = new URLSearchParams(window.location.search).get('data');
             if (!data) return;
-
             try {
-                data = data.replace(/-/g, '+').replace(/_/g, '/');
-                while (data.length % 4) {
-                    data += '=';
+                let base64 = data.replace(/-/g, '+').replace(/_/g, '/');
+                while (base64.length % 4) {
+                    base64 += '=';
                 }
-
-                const binaryString = atob(data);
-                const compressed = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) {
-                    compressed[i] = binaryString.charCodeAt(i);
-                }
-
-                const decodedData = pako.inflate(compressed, {
-                    to: 'string'
-                });
+                const compressed = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+                const decodedData = pako.inflate(compressed, { to: 'string' });
                 const sharedData = JSON.parse(decodedData);
                 enterSharedMode();
 
@@ -876,16 +961,11 @@
                         const latlngs = p.ll;
 
                         if (p.i) {
-                            polygonToStyle = L.polygon(latlngs, {
-                                isCustomPolygon: true
-                            });
+                            polygonToStyle = L.polygon(latlngs, { isCustomPolygon: true });
                         } else {
                             try {
                                 const turfCoords = latlngs.map(ring => ring.map(ll => [ll[1], ll[0]]));
-                                const tempGeoJSON = {
-                                    type: 'Polygon',
-                                    coordinates: turfCoords
-                                };
+                                const tempGeoJSON = { type: 'Polygon', coordinates: turfCoords };
                                 const center = turf.centerOfMass(tempGeoJSON);
                                 countyBoundariesLayer.eachLayer(layer => {
                                     if (polygonToStyle) return;
@@ -896,13 +976,11 @@
                                 if (polygonToStyle) countyBoundariesLayer.removeLayer(polygonToStyle);
                             } catch (e) {
                                 console.error("Could not find center of pre-loaded polygon, creating new one.", e);
-                                polygonToStyle = L.polygon(latlngs, {
-                                    isCustomPolygon: false
-                                });
+                                polygonToStyle = L.polygon(latlngs, { isCustomPolygon: false });
                             }
                         }
                         if (!polygonToStyle) return;
-
+                        
                         if (p.c) {
                             polygonToStyle.customColor = 'yes';
                             polygonToStyle.levelPreset = p.l;
@@ -920,21 +998,14 @@
                             }
                         } else {
                             polygonToStyle.customColor = 'no';
-                            polygonToStyle.setStyle({
-                                color: 'black',
-                                fillOpacity: 0,
-                                weight: 2,
-                                pane: 'counties'
-                            });
+                            polygonToStyle.setStyle({ color: 'black', fillOpacity: 0, weight: 2, pane: 'counties' });
                             countyBoundariesLayer.addLayer(polygonToStyle);
                         }
                     });
                 }
                 if (sharedData.m && Array.isArray(sharedData.m)) {
                     sharedData.m.forEach(m => {
-                        const marker = L.circleMarker(m.ll, {
-                            isCustomMarker: true
-                        });
+                        const marker = L.circleMarker(m.ll, { isCustomMarker: true });
                         if (m.c) {
                             marker.customColor = 'yes';
                             marker.levelPreset = m.l;
@@ -949,14 +1020,7 @@
                             warningMarkersLayer.addLayer(marker);
                         } else {
                             marker.customColor = 'no';
-                            marker.setStyle({
-                                radius: 6,
-                                color: 'black',
-                                weight: 2,
-                                fillColor: 'grey',
-                                fillOpacity: 0.5,
-                                pane: 'counties'
-                            });
+                            marker.setStyle({ radius: 6, color: 'black', weight: 2, fillColor: 'grey', fillOpacity: 0.5, pane: 'counties' });
                             customMarkersLayer.addLayer(marker);
                         }
                     });
@@ -970,13 +1034,23 @@
                     const isCurrentlyLight = currentThemeLayer === lightThemeLayer;
                     if (wantsLightTheme !== isCurrentlyLight) toggleMapTheme();
                     themeToggleCheckbox.checked = wantsLightTheme;
-
+                    
                     const radarToggleCheckbox = document.getElementById('radar-toggle-checkbox');
                     const wantsRadar = sharedData.s.r;
-                    if (wantsRadar !== map.hasLayer(radarLayer)) toggleRadarLayer({
-                        checked: wantsRadar
-                    });
+                    if (wantsRadar !== map.hasLayer(radarLayer)) toggleRadarLayer({ checked: wantsRadar });
                     radarToggleCheckbox.checked = wantsRadar;
+
+					const outlookToggleCheckbox = document.getElementById('outlook-toggle-checkbox');
+                    if (sharedData.s.o) {
+						toggleOutlookLayer({ checked: true });
+						outlookToggleCheckbox.checked = true;
+					}
+
+                    const nwsWarningsToggleCheckbox = document.getElementById('nws-warnings-toggle-checkbox');
+                    if (sharedData.s.w) {
+                        toggleNwsWarningsLayer({ checked: true });
+                        nwsWarningsToggleCheckbox.checked = true;
+                    }
                 }
             } catch (error) {
                 console.error("Failed to parse shared data from URL:", error);
