@@ -52,7 +52,6 @@
             font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
             padding: 10px;
             border-radius: 4px;
-            max-width: 300px;
         }
         .spc-watch-popup .maplibregl-popup-tip { display: none; }
         .spc-watch-popup p { margin-top: 5px; margin-bottom: 5px; }
@@ -460,13 +459,28 @@
                 const props = topFeature.properties;
                 const title = props.event || "Weather Alert";
                 
-                const issuedDate = new Date(props.onset);
+                const issuedDate = new Date(props.sent);
                 const expireDate = new Date(props.expires);
                 const dateOptions = { timeZone: 'America/Chicago', month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true };
                 const issuedString = issuedDate ? issuedDate.toLocaleString('en-US', dateOptions) : "N/A";
                 const expireString = expireDate ? expireDate.toLocaleString('en-US', dateOptions) : "N/A";
                 
-                const alertText = props.description || "No description available.";
+                let fullAlertText = '';
+                if (props.description) {
+                    fullAlertText += props.description;
+                }
+                if (props.instruction) {
+                    if (fullAlertText.length > 0) {
+                        fullAlertText += '\n\n<hr style="margin: 4px 0; border: 0; border-top: 1px solid #555;">\n';
+                    }
+                    fullAlertText += `<strong>Instructions:</strong>\n${props.instruction}`;
+                }
+
+                if (!fullAlertText) {
+                    fullAlertText = "No description available.";
+                }
+
+                const formattedAlertText = fullAlertText.replace(/\n/g, '<br>');
 
                 const description = `
                     <strong style="font-size: 14px;">${title}</strong>
@@ -474,7 +488,7 @@
                     <p><strong>Issued:</strong> ${issuedString}</p>
                     <p><strong>Expires:</strong> ${expireString}</p>
                     <hr style="margin: 4px 0; border: 0; border-top: 1px solid #555;">
-                    <p>${alertText}</p>
+                    <p>${formattedAlertText}</p>
                 `;
                 
                 alertPopup.setLngLat(e.lngLat).setHTML(description).addTo(map);
