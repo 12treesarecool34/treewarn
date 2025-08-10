@@ -5,11 +5,12 @@
     <link rel="icon" href="https://raw.githubusercontent.com/microsoft/fluentui-emoji/refs/heads/main/assets/Deciduous%20tree/3D/deciduous_tree_3d.png" />
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css" rel="stylesheet" />
+    <script src='https://unpkg.com/maplibre-gl@4.1.2/dist/maplibre-gl.js'></script>
+    <link href='https://unpkg.com/maplibre-gl@4.1.2/dist/maplibre-gl.css' rel='stylesheet' />
     <style>
         body { margin: 0; padding: 0; font-family: sans-serif; }
         #map { position: absolute; top: 0; bottom: 0; width: 100%; }
-        #settings-panel { position: absolute; top: 10px; right: 10px; background: rgba(255, 255, 255, 0.95); padding: 15px; border-radius: 5px; z-index: 1; min-width: 240px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        #settings-panel { position: absolute; top: 10px; right: 10px; background: rgba(255, 255, 255, 0.95); padding: 15px; border-radius: 5px; z-index: 1; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
         #settings-panel h2 { margin-top: 0; margin-bottom: 10px; font-size: 1.2em; }
         .settings-group { margin-bottom: 15px; }
         .settings-group:last-child { margin-bottom: 0; }
@@ -18,12 +19,55 @@
         #settings-panel label { display: block; margin-bottom: 8px; cursor: pointer; }
         #settings-panel input[type="checkbox"], #settings-panel input[type="radio"] { margin-right: 5px; vertical-align: middle; }
         #settings-panel select { width: 100%; padding: 5px; margin-top: 2px; border-radius: 3px; border: 1px solid #ccc; }
-        .maplibregl-popup-content { font-family: sans-serif; padding: 10px; text-align: center; }
-        .maplibregl-popup-content button {
-            background-color: #007bff; color: white; border: none; padding: 5px 10px;
-            margin: 3px; border-radius: 3px; cursor: pointer; display: block; width: 100%;
+        
+        .maplibregl-popup-content { font-family: sans-serif; padding: 10px; }
+
+        /* --- SPC Watch & Alert Popup Styling --- */
+        .spc-watch-popup .maplibregl-popup-content {
+            background-color: #2c2c2c;
+            color: #fff;
+            font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+            padding: 10px;
+            border-radius: 4px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            max-width: 300px;
         }
-        .maplibregl-popup-content button:hover { background-color: #0056b3; }
+        .spc-watch-popup .maplibregl-popup-tip { display: none; }
+        .spc-watch-popup p { margin-top: 5px; margin-bottom: 5px; }
+
+
+        /* --- Radar Site Popup Styling --- */
+        .radar-site-popup .maplibregl-popup-content {
+            background-color: #2c2c2c;
+            color: #fff;
+            font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+            padding: 10px;
+            border-radius: 4px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+        .radar-site-popup .maplibregl-popup-tip { display: none; }
+
+        .radar-site-popup button:not(.maplibregl-popup-close-button) {
+            background-color: #4a4a4a;
+            color: white;
+            border: 1px solid #666;
+            padding: 5px 10px;
+            margin: 5px 0 0 0;
+            border-radius: 3px;
+            cursor: pointer;
+            display: block;
+            width: 100%;
+            text-align: center;
+        }
+        .radar-site-popup button:not(.maplibregl-popup-close-button):hover {
+            background-color: #5a5a5a;
+        }
+        .radar-site-popup hr {
+            margin: 5px 0;
+            border: 0;
+            border-top: 1px solid #555;
+        }
     </style>
 </head>
 <body>
@@ -55,13 +99,13 @@
         </div>
         <div class="settings-group">
             <h3>Other Overlays</h3>
+            <label><input type="checkbox" id="watches-toggle" checked> Watches</label>
             <label><input type="checkbox" id="radar-toggle" checked> Weather Radar</label>
             <label><input type="checkbox" id="alerts-toggle" checked> Alerts</label>
             <label><input type="checkbox" id="radar-sites-toggle" checked> Radar Sites</label>
         </div>
     </div>
 
-    <script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
     <script>
         const map = new maplibregl.Map({
             container: 'map',
@@ -71,9 +115,7 @@
             attributionControl: false
         });
 
-        map.addControl(new maplibregl.AttributionControl({
-            compact: true
-        }));
+        map.addControl(new maplibregl.AttributionControl({ compact: true }));
 
         const layerIds = {
             radar: 'weather-radar-layer',
@@ -81,6 +123,8 @@
             alertsBorder: 'alerts-border-layer',
             radarSites: 'nws-radar-sites-layer',
             singleSiteRadar: 'single-site-radar-layer',
+            watchesFill: 'watch-polygons-fill',
+            watchesBorder: 'watch-polygons-border',
             spc: {
                 day1: { cat: 'spc-day1-cat', torn: 'spc-day1-torn', hail: 'spc-day1-hail', wind: 'spc-day1-wind' },
                 day2: { cat: 'spc-day2-cat', torn: 'spc-day2-torn', hail: 'spc-day2-hail', wind: 'spc-day2-wind' },
@@ -96,6 +140,12 @@
         const baseSpcLayerIds = Object.values(layerIds.spc).flatMap(day => Object.values(day));
         const allSpcLayerIds = baseSpcLayerIds.flatMap(id => [id, `${id}-border`]);
 
+        const spcSources = [
+            { id: layerIds.spc.day1.cat, url: 'https://www.spc.noaa.gov/products/outlook/day1otlk_cat.nolyr.geojson' }, { id: layerIds.spc.day1.torn, url: 'https://www.spc.noaa.gov/products/outlook/day1otlk_torn.nolyr.geojson' }, { id: layerIds.spc.day1.hail, url: 'https://www.spc.noaa.gov/products/outlook/day1otlk_hail.nolyr.geojson' }, { id: layerIds.spc.day1.wind, url: 'https://www.spc.noaa.gov/products/outlook/day1otlk_wind.nolyr.geojson' },
+            { id: layerIds.spc.day2.cat, url: 'https://www.spc.noaa.gov/products/outlook/day2otlk_cat.nolyr.geojson' }, { id: layerIds.spc.day2.torn, url: 'https://www.spc.noaa.gov/products/outlook/day2otlk_torn.nolyr.geojson' }, { id: layerIds.spc.day2.hail, url: 'https://www.spc.noaa.gov/products/outlook/day2otlk_hail.nolyr.geojson' }, { id: layerIds.spc.day2.wind, url: 'https://www.spc.noaa.gov/products/outlook/day2otlk_wind.nolyr.geojson' },
+            { id: layerIds.spc.day3.cat, url: 'https://www.spc.noaa.gov/products/outlook/day3otlk_cat.nolyr.geojson' }, { id: layerIds.spc.day3.prob, url: 'https://www.spc.noaa.gov/products/outlook/day3otlk_prob.nolyr.geojson' }
+        ];
+
         const daySelect = document.getElementById('spc-day-select');
         const typeSelect = document.getElementById('spc-type-select');
         const typeContainer = document.getElementById('spc-type-container');
@@ -105,17 +155,78 @@
             day2: [{ value: 'cat', text: 'Categorical' }, { value: 'torn', text: 'Tornado' }, { value: 'hail', text: 'Hail' }, { value: 'wind', text: 'Wind' }],
             day3: [{ value: 'cat', text: 'Categorical' }, { value: 'prob', text: 'Probabilistic' }]
         };
+
+        function parseApiDate(dateString) {
+            if (!dateString || dateString.length !== 12) return null;
+            const year = +dateString.substring(0, 4);
+            const month = +dateString.substring(4, 6) - 1;
+            const day = +dateString.substring(6, 8);
+            const hour = +dateString.substring(8, 10);
+            const minute = +dateString.substring(10, 12);
+            return new Date(Date.UTC(year, month, day, hour, minute));
+        }
+
+        async function updateWatchData() {
+            const now = new Date();
+            const yesterday = new Date(now);
+            yesterday.setUTCDate(now.getUTCDate() - 1);
+
+            const formatDate = (date) => ({
+                year: date.getUTCFullYear(),
+                month: String(date.getUTCMonth() + 1).padStart(2, '0'),
+                day: String(date.getUTCDate()).padStart(2, '0'),
+            });
+
+            const to = formatDate(now);
+            const from = formatDate(yesterday);
+            const url = `https://www.mesonet.agron.iastate.edu/cgi-bin/request/gis/spc_watch.py?year1=${from.year}&month1=${from.month}&day1=${from.day}&hour1=0&minute1=0&year2=${to.year}&month2=${to.month}&day2=${to.day}&hour2=23&minute2=0&format=geojson`;
+
+            try {
+                const response = await fetch(url, { headers: { 'Accept': 'application/geo+json' } });
+                if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
+                
+                const fullGeoJson = await response.json();
+
+                const activeFeatures = fullGeoJson.features.filter(feature => {
+                    const expireDate = parseApiDate(feature.properties.EXPIRE);
+                    return expireDate && expireDate >= now;
+                });
+                
+                const source = map.getSource('spc-watches');
+                if (source) {
+                    source.setData({ type: 'FeatureCollection', features: activeFeatures });
+                }
+
+            } catch (error) {
+                console.error("Failed to refresh watch data:", error);
+            }
+        }
+
+        function getRatingFromProbability(probability) {
+            if (probability >= 60) return "High";
+            if (probability >= 30) return "Moderate";
+            if (probability >= 10) return "Low";
+            return "Very Low";
+        }
+
+        function createHazardHtmlLine(label, probability) {
+            const probValue = (typeof probability === 'number') ? probability : -1;
+            const rating = getRatingFromProbability(probValue);
+            return `<p style="margin: 0;"><strong>${label}:</strong> ${rating}</p>`;
+        }
         
         function removeSingleSiteLayer() {
             if (map.getLayer(layerIds.singleSiteRadar)) map.removeLayer(layerIds.singleSiteRadar);
             if (map.getSource('single-site-radar-source')) map.removeSource('single-site-radar-source');
         }
 
-        function closeActivePopup() {
+        function closeAllPopups() {
             if (currentPopup) {
                 currentPopup.remove();
                 currentPopup = null;
             }
+            if (watchPopup && watchPopup.isOpen()) watchPopup.remove();
+            if (alertPopup && alertPopup.isOpen()) alertPopup.remove();
             activeSiteIdForMenu = null;
         }
 
@@ -124,6 +235,7 @@
                 removeSingleSiteLayer();
                 activeRadarProductCode = null;
                 activeSiteIdForData = null;
+                closeAllPopups(); 
                 return;
             }
 
@@ -139,37 +251,55 @@
                 'type': 'raster', 'tiles': [tileUrl], 'tileSize': 256, 'attribution': 'Radar data from NOAA'
             });
 
-            // MODIFIED: Place the single-site radar layer on top of the IEM mosaic but below the alerts.
             map.addLayer({
                 'id': layerIds.singleSiteRadar, 'type': 'raster', 'source': 'single-site-radar-source', 'paint': {}
-            }, layerIds.alerts);
+            }, layerIds.watchesFill);
+            
+            closeAllPopups();
         }
 
         function updateAlerts() {
             if (!map.getSource('alerts')) return;
             fetch('https://api.weather.gov/alerts/active?status=actual&message_type=alert,update')
                 .then(response => response.json())
-                .then(data => {
-                    if (map.getSource('alerts')) {
-                        map.getSource('alerts').setData(data);
-                    }
-                }).catch(e => console.error("Alerts Fetch ERR:", e));
+                .then(data => { if (map.getSource('alerts')) map.getSource('alerts').setData(data); })
+                .catch(e => console.error("Alerts Fetch ERR:", e));
         }
 
         function updateRadar() {
-            // This function refreshes the IEM mosaic source to get the latest data.
-            // It is simplified to just update the source URL timestamp.
              if (map.getSource('weather-radar')) {
-                map.getSource('weather-radar').setTiles([
-                    `https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0q.cgi?service=WMS&version=1.1.1&request=GetMap&layers=nexrad-n0q-900913&srs=EPSG:900913&width=256&height=256&format=image/png&transparent=true&bbox={bbox-epsg-3857}&_=${new Date().getTime()}`
-                ]);
+                map.getSource('weather-radar').setTiles([ `https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0q.cgi?service=WMS&version=1.1.1&request=GetMap&layers=nexrad-n0q-900913&srs=EPSG:900913&width=256&height=256&format=image/png&transparent=true&bbox={bbox-epsg-3857}&_=${new Date().getTime()}` ]);
+            }
+        }
+
+        function updateSingleSiteRadar() {
+            if (map.getSource('single-site-radar-source') && activeSiteIdForData && activeRadarProductCode) {
+                const source = map.getSource('single-site-radar-source');
+                const productLayer = `${activeSiteIdForData}_${activeRadarProductCode}`;
+                const tileUrl = `https://opengeo.ncep.noaa.gov/geoserver/${activeSiteIdForData}/ows?service=WMS&version=1.3.0&request=GetMap&layers=${productLayer}&styles=&format=image/png&transparent=true&width=256&height=256&crs=EPSG:3857&bbox={bbox-epsg-3857}&_=${new Date().getTime()}`;
+                source.setTiles([tileUrl]);
+            }
+        }
+        
+        async function updateSpcOutlooks() {
+            for (const sourceInfo of spcSources) {
+                const source = map.getSource(sourceInfo.id);
+                if (source) {
+                    try {
+                        const response = await fetch(`${sourceInfo.url}?t=${new Date().getTime()}`);
+                        if (!response.ok) throw new Error(`Network response was not ok for ${sourceInfo.id}`);
+                        const geojsonData = await response.json();
+                        source.setData(geojsonData);
+                    } catch (error) {
+                        console.error(`Failed to refresh SPC outlook data for ${sourceInfo.id}:`, error);
+                    }
+                }
             }
         }
 
         function setupMapData() {
             if (map.getSource('weather-radar')) return;
 
-            // Find the ID of the first symbol layer (map labels) to insert other layers before it.
             let firstSymbolId;
             for (const layer of map.getStyle().layers) {
                 if (layer.type === 'symbol') {
@@ -177,83 +307,32 @@
                     break;
                 }
             }
-
-            // --- Add all data sources ---
-            const spcSources = [
-                { id: layerIds.spc.day1.cat, url: 'https://www.spc.noaa.gov/products/outlook/day1otlk_cat.nolyr.geojson' }, { id: layerIds.spc.day1.torn, url: 'https://www.spc.noaa.gov/products/outlook/day1otlk_torn.nolyr.geojson' }, { id: layerIds.spc.day1.hail, url: 'https://www.spc.noaa.gov/products/outlook/day1otlk_hail.nolyr.geojson' }, { id: layerIds.spc.day1.wind, url: 'https://www.spc.noaa.gov/products/outlook/day1otlk_wind.nolyr.geojson' },
-                { id: layerIds.spc.day2.cat, url: 'https://www.spc.noaa.gov/products/outlook/day2otlk_cat.nolyr.geojson' }, { id: layerIds.spc.day2.torn, url: 'https://www.spc.noaa.gov/products/outlook/day2otlk_torn.nolyr.geojson' }, { id: layerIds.spc.day2.hail, url: 'https://www.spc.no-aa.gov/products/outlook/day2otlk_hail.nolyr.geojson' }, { id: layerIds.spc.day2.wind, url: 'https://www.spc.noaa.gov/products/outlook/day2otlk_wind.nolyr.geojson' },
-                { id: layerIds.spc.day3.cat, url: 'https://www.spc.noaa.gov/products/outlook/day3otlk_cat.nolyr.geojson' }, { id: layerIds.spc.day3.prob, url: 'https://www.spc.noaa.gov/products/outlook/day3otlk_prob.nolyr.geojson' }
-            ];
+            
             spcSources.forEach(source => map.addSource(source.id, { type: 'geojson', data: source.url }));
+            map.addSource('spc-watches', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
             map.addSource('weather-radar', { 'type': 'raster', 'tiles': [`https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0q.cgi?service=WMS&version=1.1.1&request=GetMap&layers=nexrad-n0q-900913&srs=EPSG:900913&width=256&height=256&format=image/png&transparent=true&bbox={bbox-epsg-3857}&_=${new Date().getTime()}`], 'tileSize': 256 });
             map.addSource('alerts', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
             map.addSource('radar-sites', { type: 'geojson', data: 'https://api.weather.gov/radar/stations?stationType=WSR-88D,TDWR' });
             
             updateAlerts();
             
-            // --- Add layers in the correct visual order (bottom to top) ---
-            // Each layer is inserted 'before' an existing layer ID. We use `firstSymbolId` as the main anchor.
-            // The first layer added with this anchor will be at the bottom of the group.
+            const alertFilter = [ 'in', ['get', 'event'], ['literal', [ 'Tornado Warning', 'Severe Thunderstorm Warning', 'Severe Weather Statement', 'Special Marine Warning', 'Marine Weather Statement', 'Flash Flood Warning', 'Flash Flood Watch', 'Flash Flood Advisory', 'Flood Warning', 'Flood Watch', 'Flood Advisory', 'Special Weather Statement' ]] ];
+            const alertColor = [ 'match', ['get', 'event'], 'Tornado Warning', '#FF0000', 'Severe Thunderstorm Warning', '#FFA500', 'Severe Weather Statement', '#ADD8E6', 'Special Marine Warning', '#FFFF00', 'Marine Weather Statement', '#FFFF00', 'Flash Flood Warning', '#008080', 'Flash Flood Watch', '#008080', 'Flash Flood Advisory', '#008080', 'Flood Warning', '#008000', 'Flood Watch', '#008000', 'Flood Advisory', '#008000', 'Special Weather Statement', '#ADD8E6', '#808080' ];
+            
+            map.addLayer({ id: layerIds.alerts, type: 'fill', source: 'alerts', filter: alertFilter, paint: { 'fill-color': alertColor, 'fill-opacity': 0.3 }, layout: { 'visibility': document.getElementById('alerts-toggle').checked ? 'visible' : 'none' } }, firstSymbolId);
+            map.addLayer({ id: layerIds.alertsBorder, type: 'line', source: 'alerts', filter: alertFilter, paint: { 'line-color': alertColor, 'line-width': 2 }, layout: { 'visibility': document.getElementById('alerts-toggle').checked ? 'visible' : 'none' } }, firstSymbolId);
+            
+            map.addLayer({ id: layerIds.watchesFill, type: 'fill', source: 'spc-watches', paint: { 'fill-color': ['case', ['==', ['get', 'TYPE'], 'TOR'], '#8B0000', '#556B2F'], 'fill-opacity': 0.3 }, layout: { 'visibility': document.getElementById('watches-toggle').checked ? 'visible' : 'none' } }, layerIds.alerts);
+            map.addLayer({ id: layerIds.watchesBorder, type: 'line', source: 'spc-watches', paint: { 'line-color': ['case', ['==', ['get', 'TYPE'], 'TOR'], '#8B0000', '#556B2F'], 'line-width': 2 }, layout: { 'visibility': document.getElementById('watches-toggle').checked ? 'visible' : 'none' } }, layerIds.alerts);
 
-            // 6. SPC Outlooks (Bottom-most)
+            map.addLayer({ id: layerIds.radar, type: 'raster', source: 'weather-radar', layout: { 'visibility': document.getElementById('radar-toggle').checked ? 'visible' : 'none' } }, layerIds.watchesFill);
+            
             spcSources.forEach(source => {
-                map.addLayer({ // Add fill layer
-                    id: source.id, type: 'fill', source: source.id,
-                    paint: { 'fill-color': ['get', 'fill'], 'fill-opacity': 0.3 },
-                    layout: { 'visibility': 'none' }
-                }, firstSymbolId);
-                map.addLayer({ // Add border layer on top of fill
-                    id: `${source.id}-border`, type: 'line', source: source.id,
-                    paint: { 'line-color': ['get', 'fill'], 'line-width': 2 },
-                    layout: { 'visibility': 'none' }
-                }, firstSymbolId);
+                map.addLayer({ id: source.id, type: 'fill', source: source.id, paint: { 'fill-color': ['get', 'fill'], 'fill-opacity': 0.3 }, layout: { 'visibility': 'none' } }, layerIds.radar);
+                map.addLayer({ id: `${source.id}-border`, type: 'line', source: source.id, paint: { 'line-color': ['get', 'fill'], 'line-width': 2 }, layout: { 'visibility': 'none' } }, layerIds.radar);
             });
-
-            // 5. IEM Mosaic Radar
-            map.addLayer({ 
-                id: layerIds.radar, type: 'raster', source: 'weather-radar',
-                layout: { 'visibility': document.getElementById('radar-toggle').checked ? 'visible' : 'none' }
-            }, firstSymbolId);
             
-            // 4. Specific Site Radar is added dynamically on click.
-
-            // 3. Alerts
-            const alertFilter = [
-                'in', ['get', 'event'],
-                ['literal', [ 'Tornado Warning', 'Severe Thunderstorm Warning', 'Severe Weather Statement', 'Special Marine Warning', 'Marine Weather Statement', 'Flash Flood Warning', 'Flash Flood Advisory', 'Flood Warning', 'Flood Advisory', 'Special Weather Statement' ]]
-            ];
-            const alertColor = [
-                'match', ['get', 'event'],
-                'Tornado Warning', '#FF0000', 'Severe Thunderstorm Warning', '#FFA500', 'Severe Weather Statement', '#ADD8E6',
-                'Special Marine Warning', '#FFFF00', 'Marine Weather Statement', '#FFFF00', 'Flash Flood Warning', '#008080', 'Flash Flood Advisory', '#008080',
-                'Flood Warning', '#008000', 'Flood Advisory', '#008000', 'Special Weather Statement', '#ADD8E6', '#808080'
-            ];
-
-            map.addLayer({ // Add fill layer
-                id: layerIds.alerts, type: 'fill', source: 'alerts', filter: alertFilter,
-                paint: { 'fill-color': alertColor, 'fill-opacity': 0.3 },
-                layout: { 'visibility': document.getElementById('alerts-toggle').checked ? 'visible' : 'none' }
-            }, firstSymbolId);
-            map.addLayer({ // Add border layer on top of fill
-                id: layerIds.alertsBorder, type: 'line', source: 'alerts', filter: alertFilter,
-                paint: { 'line-color': alertColor, 'line-width': 2 },
-                layout: { 'visibility': document.getElementById('alerts-toggle').checked ? 'visible' : 'none' }
-            }, firstSymbolId);
-
-            // 2. Map Labels are already in place (`firstSymbolId`).
-            
-            // 1. Radar Sites (Top-most)
-            // Add without a 'beforeId' to place it on top of all other layers, including labels.
-            map.addLayer({
-                id: layerIds.radarSites, type: 'circle', source: 'radar-sites',
-                paint: { 
-                    'circle-radius': 4, 
-                    'circle-stroke-color': 'white', 
-                    'circle-stroke-width': 1.5,
-                    'circle-color': [ 'match', ['get', 'stationType'], 'WSR-88D', '#0099ff', 'TDWR', '#ff9900', '#808080' ]
-                },
-                layout: { 'visibility': document.getElementById('radar-sites-toggle').checked ? 'visible' : 'none' }
-            });
+            map.addLayer({ id: layerIds.radarSites, type: 'circle', source: 'radar-sites', paint: { 'circle-radius': 4, 'circle-stroke-color': 'white', 'circle-stroke-width': 1.5, 'circle-color': [ 'match', ['get', 'stationType'], 'WSR-88D', '#0099ff', 'TDWR', '#ff9900', '#808080' ] }, layout: { 'visibility': document.getElementById('radar-sites-toggle').checked ? 'visible' : 'none' } });
         }
 
         function updateTypeDropdown() {
@@ -262,40 +341,24 @@
             if (day !== 'none') {
                 const types = outlookTypes['day' + day];
                 typeSelect.innerHTML = '';
-                types.forEach(type => {
-                    const option = document.createElement('option');
-                    option.value = type.value;
-                    option.textContent = type.text;
-                    typeSelect.appendChild(option);
-                });
+                types.forEach(type => { const option = document.createElement('option'); option.value = type.value; option.textContent = type.text; typeSelect.appendChild(option); });
             }
         }
 
         function updateSpcLayerVisibility() {
             if (!map.isStyleLoaded()) return;
-            allSpcLayerIds.forEach(id => {
-                 if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'none');
-            });
-
+            allSpcLayerIds.forEach(id => { if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'none'); });
             const day = daySelect.value;
             if (day === 'none') return;
-            
             const type = typeSelect.value;
             const layerToShow = layerIds.spc['day' + day][type];
-            
             if (layerToShow) {
-                if (map.getLayer(layerToShow)) {
-                    map.setLayoutProperty(layerToShow, 'visibility', 'visible');
-                }
-                if (map.getLayer(`${layerToShow}-border`)) {
-                    map.setLayoutProperty(`${layerToShow}-border`, 'visibility', 'visible');
-                }
+                if (map.getLayer(layerToShow)) map.setLayoutProperty(layerToShow, 'visibility', 'visible');
+                if (map.getLayer(`${layerToShow}-border`)) map.setLayoutProperty(`${layerToShow}-border`, 'visibility', 'visible');
             }
         }
         
         function handleDayChange() {
-            const day = daySelect.value;
-            typeContainer.style.display = (day === 'none') ? 'none' : 'block';
             updateTypeDropdown();
             updateSpcLayerVisibility();
         }
@@ -305,6 +368,10 @@
             daySelect.addEventListener('change', handleDayChange);
             typeSelect.addEventListener('change', updateSpcLayerVisibility);
             
+            document.getElementById('watches-toggle').addEventListener('change', (e) => {
+                if (map.getLayer(layerIds.watchesFill)) map.setLayoutProperty(layerIds.watchesFill, 'visibility', e.target.checked ? 'visible' : 'none');
+                if (map.getLayer(layerIds.watchesBorder)) map.setLayoutProperty(layerIds.watchesBorder, 'visibility', e.target.checked ? 'visible' : 'none');
+            });
             document.getElementById('radar-toggle').addEventListener('change', (e) => { if (map.getLayer(layerIds.radar)) map.setLayoutProperty(layerIds.radar, 'visibility', e.target.checked ? 'visible' : 'none'); });
             document.getElementById('alerts-toggle').addEventListener('change', (e) => { 
                 if (map.getLayer(layerIds.alerts)) map.setLayoutProperty(layerIds.alerts, 'visibility', e.target.checked ? 'visible' : 'none');
@@ -313,80 +380,133 @@
             document.getElementById('radar-sites-toggle').addEventListener('change', (e) => { if (map.getLayer(layerIds.radarSites)) map.setLayoutProperty(layerIds.radarSites, 'visibility', e.target.checked ? 'visible' : 'none'); });
 
             document.getElementById('map-style-select').addEventListener('change', (e) => {
-                const styleUrl = e.target.value === 'dark' 
-                    ? 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json' 
-                    : 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
+                const styleUrl = e.target.value === 'dark' ? 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json' : 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
                 map.setStyle(styleUrl);
             });
 
             setInterval(() => {
                 updateAlerts();
                 updateRadar();
+                updateWatchData();
+                updateSingleSiteRadar();
             }, 60000); 
+
+            setInterval(updateSpcOutlooks, 360000); 
         });
 
         map.on('style.load', () => {
             setupMapData();
+            updateWatchData();
             handleDayChange(); 
         });
         
-        map.on('click', layerIds.radarSites, (e) => {
-            e.preventDefault(); 
-            const feature = e.features[0];
-            const props = feature.properties;
-            const clickedStationId = props.id;
+        const watchPopup = new maplibregl.Popup({ closeButton: true, anchor: 'center', className: 'spc-watch-popup' });
+        const alertPopup = new maplibregl.Popup({ closeButton: true, anchor: 'center', className: 'spc-watch-popup' });
 
-            if (activeSiteIdForMenu === clickedStationId) {
-                closeActivePopup();
+        // MODIFIED: Consolidated all click logic into a single handler to enforce priority.
+        map.on('click', (e) => {
+            const clickableLayers = [layerIds.radarSites, layerIds.alerts, layerIds.watchesFill];
+            const features = map.queryRenderedFeatures(e.point, { layers: clickableLayers });
+
+            closeAllPopups();
+
+            if (!features.length) {
                 return;
             }
-            
-            closeActivePopup();
 
-            const clickedStationIdLower = clickedStationId.toLowerCase();
-            if (activeSiteIdForData && activeSiteIdForData !== clickedStationIdLower) {
-                removeSingleSiteLayer();
-                activeRadarProductCode = null;
-                activeSiteIdForData = null;
-            }
+            const topFeature = features[0];
 
-            activeSiteIdForMenu = clickedStationId;
+            // Priority 1: Radar Sites
+            if (topFeature.layer.id === layerIds.radarSites) {
+                const props = topFeature.properties;
+                const clickedStationId = props.id;
 
-            const coordinates = feature.geometry.coordinates.slice();
-            const name = props.name;
-            const stationType = props.stationType;
+                if (activeSiteIdForMenu === clickedStationId) { closeAllPopups(); return; }
+                
+                const clickedStationIdLower = clickedStationId.toLowerCase();
+                if (activeSiteIdForData && activeSiteIdForData !== clickedStationIdLower) {
+                    removeSingleSiteLayer();
+                    activeRadarProductCode = null;
+                    activeSiteIdForData = null;
+                }
+                activeSiteIdForMenu = clickedStationId;
 
-            let buttonsHtml = '';
-            if (stationType === 'WSR-88D') {
-                buttonsHtml = `
-                    <button onclick="toggleRadarProduct('${clickedStationIdLower}', 'sr_bref')">Reflectivity</button>
-                    <button onclick="toggleRadarProduct('${clickedStationIdLower}', 'sr_bvel')">Velocity</button>
+                const coordinates = topFeature.geometry.coordinates.slice();
+                const name = props.name;
+                const stationType = props.stationType;
+
+                let buttonsHtml = '';
+                if (stationType === 'WSR-88D') {
+                    buttonsHtml = `<button onclick="toggleRadarProduct('${clickedStationIdLower}', 'sr_bref')">Reflectivity</button><button onclick="toggleRadarProduct('${clickedStationIdLower}', 'sr_bvel')">Velocity</button>`;
+                } else if (stationType === 'TDWR') {
+                    buttonsHtml = `<button onclick="toggleRadarProduct('${clickedStationIdLower}', 'brefl')">Long Range Reflectivity</button><button onclick="toggleRadarProduct('${clickedStationIdLower}', 'bref1')">Reflectivity</button><button onclick="toggleRadarProduct('${clickedStationIdLower}', 'bvel')">Velocity</button>`;
+                }
+
+                while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) { coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360; }
+                
+                currentPopup = new maplibregl.Popup({ closeOnClick: false, closeButton: true, className: 'radar-site-popup', anchor: 'center' })
+                    .setLngLat(coordinates)
+                    .setHTML(`<strong>${clickedStationId} - ${name}</strong><br>${stationType}<hr>${buttonsHtml}`)
+                    .addTo(map);
+
+            // Priority 2: Alerts
+            } else if (topFeature.layer.id === layerIds.alerts) {
+                const props = topFeature.properties;
+                const title = props.event || "Weather Alert";
+                
+                const issuedDate = new Date(props.onset);
+                const expireDate = new Date(props.expires);
+                const dateOptions = { timeZone: 'America/Chicago', month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true };
+                const issuedString = issuedDate ? issuedDate.toLocaleString('en-US', dateOptions) : "N/A";
+                const expireString = expireDate ? expireDate.toLocaleString('en-US', dateOptions) : "N/A";
+                
+                const alertText = props.description || "No description available.";
+
+                const description = `
+                    <strong style="font-size: 14px;">${title}</strong>
+                    <hr style="margin: 4px 0; border: 0; border-top: 1px solid #555;">
+                    <p><strong>Issued:</strong> ${issuedString}</p>
+                    <p><strong>Expires:</strong> ${expireString}</p>
+                    <hr style="margin: 4px 0; border: 0; border-top: 1px solid #555;">
+                    <p>${alertText}</p>
                 `;
-            } else if (stationType === 'TDWR') {
-                buttonsHtml = `
-                    <button onclick="toggleRadarProduct('${clickedStationIdLower}', 'brefl')">Long Range Reflectivity</button>
-                    <button onclick="toggleRadarProduct('${clickedStationIdLower}', 'bref1')">Reflectivity</button>
-                    <button onclick="toggleRadarProduct('${clickedStationIdLower}', 'bvel')">Velocity</button>
+                
+                alertPopup.setLngLat(e.lngLat).setHTML(description).addTo(map);
+
+            // Priority 3: Watches
+            } else if (topFeature.layer.id === layerIds.watchesFill) {
+                const props = topFeature.properties;
+                const title = props.TYPE === 'TOR' ? `Tornado Watch #${props.NUM}` : `Severe Thunderstorm Watch #${props.NUM}`;
+                
+                const issuedDate = parseApiDate(props.ISSUE);
+                const expireDate = parseApiDate(props.EXPIRE);
+                const dateOptions = { timeZone: 'America/Chicago', month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true };
+                const issuedString = issuedDate ? issuedDate.toLocaleString('en-US', dateOptions) : "N/A";
+                const expireString = expireDate ? expireDate.toLocaleString('en-US', dateOptions) : "N/A";
+
+                const hazardLines = [
+                    createHazardHtmlLine("Tornadoes", props.P_TORTWO), createHazardHtmlLine("Sig Tornadoes", props.P_TOREF2),
+                    createHazardHtmlLine("Severe Wind", props.P_WIND10), createHazardHtmlLine("Sig Severe Wind", props.P_WIND65),
+                    createHazardHtmlLine("Severe Hail", props.P_HAIL10), createHazardHtmlLine("Sig Severe Hail", props.P_HAIL2I)
+                ].join('');
+
+                const description = `
+                    <strong style="font-size: 14px;">${title}</strong>
+                    <hr style="margin: 4px 0; border: 0; border-top: 1px solid #555;">
+                    <p style="margin: 0;"><strong>Issued:</strong> ${issuedString}</p>
+                    <p style="margin: 0;"><strong>Expires:</strong> ${expireString}</p>
+                    <hr style="margin: 4px 0; border: 0; border-top: 1px solid #555;">
+                    ${hazardLines}
                 `;
+                
+                watchPopup.setLngLat(e.lngLat).setHTML(description).addTo(map);
             }
-
-            while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
-                coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
-            }
-
-            currentPopup = new maplibregl.Popup({ closeOnClick: false, closeButton: false })
-                .setLngLat(coordinates)
-                .setHTML(`<strong>${clickedStationId} - ${name}</strong><br>${stationType}<hr style="margin: 5px 0;">${buttonsHtml}`)
-                .addTo(map);
         });
 
-        map.on('click', (e) => {
-            const features = map.queryRenderedFeatures(e.point, { layers: [layerIds.radarSites] });
-            if (!features.length) {
-                closeActivePopup();
-            }
-        });
-
+        map.on('mouseenter', layerIds.watchesFill, () => { map.getCanvas().style.cursor = 'pointer'; });
+        map.on('mouseleave', layerIds.watchesFill, () => { map.getCanvas().style.cursor = ''; });
+        map.on('mouseenter', layerIds.alerts, () => { map.getCanvas().style.cursor = 'pointer'; });
+        map.on('mouseleave', layerIds.alerts, () => { map.getCanvas().style.cursor = ''; });
         map.on('mouseenter', layerIds.radarSites, () => { map.getCanvas().style.cursor = 'pointer'; });
         map.on('mouseleave', layerIds.radarSites, () => { map.getCanvas().style.cursor = ''; });
 
