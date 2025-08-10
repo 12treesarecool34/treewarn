@@ -149,6 +149,7 @@
         let activeSiteIdForData = null;
         let activeRadarProductCode = null;
         let currentPopup = null;
+        let allRadarSitesData = []; 
 
         const baseSpcLayerIds = Object.values(layerIds.spc).flatMap(day => Object.values(day));
         const allSpcLayerIds = baseSpcLayerIds.flatMap(id => [id, `${id}-border`]);
@@ -325,8 +326,16 @@
             map.addSource('spc-watches', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
             map.addSource('weather-radar', { 'type': 'raster', 'tiles': [`https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0q.cgi?service=WMS&version=1.1.1&request=GetMap&layers=nexrad-n0q-900913&srs=EPSG:900913&width=256&height=256&format=image/png&transparent=true&bbox={bbox-epsg-3857}&_=${new Date().getTime()}`], 'tileSize': 256 });
             map.addSource('alerts', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-            map.addSource('radar-sites', { type: 'geojson', data: 'https://api.weather.gov/radar/stations?stationType=WSR-88D,TDWR' });
             
+            const radarSitesUrl = 'https://api.weather.gov/radar/stations?stationType=WSR-88D,TDWR';
+            map.addSource('radar-sites', { type: 'geojson', data: radarSitesUrl });
+            fetch(radarSitesUrl)
+                .then(response => response.json())
+                .then(data => {
+                    allRadarSitesData = data.features;
+                })
+                .catch(e => console.error("Failed to fetch and store radar sites data:", e));
+
             updateAlerts();
             
             const alertFilter = [ 'in', ['get', 'event'], ['literal', [ 'Tornado Warning', 'Severe Thunderstorm Warning', 'Severe Weather Statement', 'Special Marine Warning', 'Marine Weather Statement', 'Flash Flood Warning', 'Flash Flood Watch', 'Flash Flood Advisory', 'Flood Warning', 'Flood Watch', 'Flood Advisory', 'Special Weather Statement' ]] ];
@@ -399,7 +408,76 @@
                 updateSingleSiteRadar();
             }, 60000); 
 
-            setInterval(updateSpcOutlooks, 360000); 
+            setInterval(updateSpcOutlooks, 360000);
+
+            map.on('mouseup', (e) => {
+                if (e.originalEvent.button !== 1) return;
+                
+                e.preventDefault();
+
+                // --- MODIFIED: The check for layer visibility has been removed. ---
+                
+                if (!allRadarSitesData || allRadarSitesData.length === 0) return;
+
+                let nearestSite = null;
+                let minDistance = Infinity;
+                const clickPoint = e.lngLat;
+
+                allRadarSitesData.forEach(site => {
+                    if (site.geometry && site.geometry.coordinates) {
+                        const sitePoint = new maplibregl.LngLat(site.geometry.coordinates[0], site.geometry.coordinates[1]);
+                        const distance = clickPoint.distanceTo(sitePoint);
+                        if (distance < minDistance) {
+                            minDistance = distance;
+                            nearestSite = site;
+                        }
+                    }
+                });
+
+                if (nearestSite) {
+                    closeAllPopups();
+
+                    const props = nearestSite.properties;
+                    const clickedStationId = props.id;
+                    const clickedStationIdLower = clickedStationId.toLowerCase();
+                    const coordinates = nearestSite.geometry.coordinates.slice();
+                    const name = props.name;
+                    const stationType = props.stationType;
+
+                    if (activeSiteIdForData && activeSiteIdForData !== clickedStationIdLower) {
+                        removeSingleSiteLayer();
+                        activeRadarProductCode = null;
+                        activeSiteIdForData = null;
+                    }
+                    activeSiteIdForMenu = clickedStationId;
+
+                    map.flyTo({
+                        center: coordinates,
+                        zoom: 9,
+                        speed: 1.5,
+                        curve: 1.4,
+                        essential: true
+                    });
+
+                    map.once('moveend', () => {
+                        if (activeSiteIdForMenu !== clickedStationId) {
+                            return; 
+                        }
+
+                        let buttonsHtml = '';
+                        if (stationType === 'WSR-88D') {
+                            buttonsHtml = `<button onclick="toggleRadarProduct('${clickedStationIdLower}', 'sr_bref')">Reflectivity</button><button onclick="toggleRadarProduct('${clickedStationIdLower}', 'sr_bvel')">Velocity</button>`;
+                        } else if (stationType === 'TDWR') {
+                            buttonsHtml = `<button onclick="toggleRadarProduct('${clickedStationIdLower}', 'brefl')">Long Range Reflectivity</button><button onclick="toggleRadarProduct('${clickedStationIdLower}', 'bref1')">Reflectivity</button><button onclick="toggleRadarProduct('${clickedStationIdLower}', 'bvel')">Velocity</button>`;
+                        }
+
+                        currentPopup = new maplibregl.Popup({ closeOnClick: false, closeButton: true, className: 'radar-site-popup', anchor: 'center' })
+                            .setLngLat(coordinates)
+                            .setHTML(`<strong>${clickedStationId} - ${name}</strong><br>${stationType}<hr>${buttonsHtml}`)
+                            .addTo(map);
+                    });
+                }
+            });
         });
 
         map.on('style.load', () => {
