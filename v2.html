@@ -10,15 +10,38 @@
     <style>
         body { margin: 0; padding: 0; font-family: sans-serif; }
         #map { position: absolute; top: 0; bottom: 0; width: 100%; }
-        #settings-panel { position: absolute; top: 10px; right: 10px; background: rgba(255, 255, 255, 0.95); padding: 15px; border-radius: 5px; z-index: 1; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        #settings-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #2c2c2c; /* Dark background */
+            color: #fff; /* Light text */
+            padding: 15px;
+            border-radius: 5px;
+            z-index: 1;
+        }
         #settings-panel h2 { margin-top: 0; margin-bottom: 10px; font-size: 1.2em; }
         .settings-group { margin-bottom: 15px; }
         .settings-group:last-child { margin-bottom: 0; }
-        .settings-group h3 { margin-top: 0; margin-bottom: 10px; font-size: 1em; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+        .settings-group h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 1em;
+            border-bottom: 1px solid #555; /* Darker border */
+            padding-bottom: 5px;
+        }
         #settings-panel .control-label { display: block; margin-bottom: 5px; font-weight: bold; }
         #settings-panel label { display: block; margin-bottom: 8px; cursor: pointer; }
         #settings-panel input[type="checkbox"], #settings-panel input[type="radio"] { margin-right: 5px; vertical-align: middle; }
-        #settings-panel select { width: 100%; padding: 5px; margin-top: 2px; border-radius: 3px; border: 1px solid #ccc; }
+        #settings-panel select {
+            width: 100%;
+            padding: 5px;
+            margin-top: 2px;
+            border-radius: 3px;
+            background-color: #4a4a4a; /* Dark select background */
+            color: white; /* Light select text */
+            border: 1px solid #666; /* Darker select border */
+        }
         
         .maplibregl-popup-content { font-family: sans-serif; padding: 10px; }
 
@@ -29,7 +52,6 @@
             font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
             padding: 10px;
             border-radius: 4px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
             max-width: 300px;
         }
         .spc-watch-popup .maplibregl-popup-tip { display: none; }
@@ -43,7 +65,6 @@
             font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
             padding: 10px;
             border-radius: 4px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
             text-align: center;
         }
         .radar-site-popup .maplibregl-popup-tip { display: none; }
@@ -76,13 +97,6 @@
 
     <div id="settings-panel">
         <h2>Settings</h2>
-        <div class="settings-group">
-            <h3>Map Style</h3>
-            <select id="map-style-select">
-                <option value="dark">Dark</option>
-                <option value="light">Light</option>
-            </select>
-        </div>
         <div class="settings-group">
             <h3>SPC Outlooks</h3>
             <label class="control-label" for="spc-day-select">Forecast Day</label>
@@ -379,11 +393,6 @@
             });
             document.getElementById('radar-sites-toggle').addEventListener('change', (e) => { if (map.getLayer(layerIds.radarSites)) map.setLayoutProperty(layerIds.radarSites, 'visibility', e.target.checked ? 'visible' : 'none'); });
 
-            document.getElementById('map-style-select').addEventListener('change', (e) => {
-                const styleUrl = e.target.value === 'dark' ? 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json' : 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
-                map.setStyle(styleUrl);
-            });
-
             setInterval(() => {
                 updateAlerts();
                 updateRadar();
@@ -403,7 +412,6 @@
         const watchPopup = new maplibregl.Popup({ closeButton: true, anchor: 'center', className: 'spc-watch-popup' });
         const alertPopup = new maplibregl.Popup({ closeButton: true, anchor: 'center', className: 'spc-watch-popup' });
 
-        // MODIFIED: Consolidated all click logic into a single handler to enforce priority.
         map.on('click', (e) => {
             const clickableLayers = [layerIds.radarSites, layerIds.alerts, layerIds.watchesFill];
             const features = map.queryRenderedFeatures(e.point, { layers: clickableLayers });
@@ -416,7 +424,6 @@
 
             const topFeature = features[0];
 
-            // Priority 1: Radar Sites
             if (topFeature.layer.id === layerIds.radarSites) {
                 const props = topFeature.properties;
                 const clickedStationId = props.id;
@@ -449,7 +456,6 @@
                     .setHTML(`<strong>${clickedStationId} - ${name}</strong><br>${stationType}<hr>${buttonsHtml}`)
                     .addTo(map);
 
-            // Priority 2: Alerts
             } else if (topFeature.layer.id === layerIds.alerts) {
                 const props = topFeature.properties;
                 const title = props.event || "Weather Alert";
@@ -473,7 +479,6 @@
                 
                 alertPopup.setLngLat(e.lngLat).setHTML(description).addTo(map);
 
-            // Priority 3: Watches
             } else if (topFeature.layer.id === layerIds.watchesFill) {
                 const props = topFeature.properties;
                 const title = props.TYPE === 'TOR' ? `Tornado Watch #${props.NUM}` : `Severe Thunderstorm Watch #${props.NUM}`;
